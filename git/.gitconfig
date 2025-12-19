@@ -1,0 +1,144 @@
+[user]
+    # Set your name and email
+    # name = Your Name
+    # email = your.email@example.com
+
+[init]
+    defaultBranch = main
+
+[core]
+    editor = cursor --wait
+    autocrlf = input
+    whitespace = fix
+    pager = delta
+
+[color]
+    ui = auto
+    diff = auto
+    status = auto
+    branch = auto
+
+[pull]
+    rebase = true
+
+[push]
+    default = current
+    autoSetupRemote = true
+    followTags = true
+
+[fetch]
+    prune = true
+    pruneTags = true
+
+[rebase]
+    autoStash = true
+    autoSquash = true
+
+[merge]
+    conflictStyle = diff3
+    ff = false
+
+[diff]
+    colorMoved = default
+    algorithm = histogram
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    side-by-side = true
+    line-numbers = true
+    syntax-theme = Dracula
+
+[alias]
+    # Status
+    s = status -sb
+    st = status
+    
+    # Commit
+    c = commit
+    cm = commit -m
+    ca = commit --amend
+    can = commit --amend --no-edit
+    
+    # Add
+    a = add
+    aa = add --all
+    ap = add --patch
+    
+    # Branch
+    b = branch
+    ba = branch -a
+    bd = branch -d
+    bD = branch -D
+    
+    # Checkout
+    co = checkout
+    cob = checkout -b
+    com = checkout main
+    cod = checkout develop
+    
+    # Push/Pull
+    p = push
+    pf = push --force-with-lease
+    pl = pull
+    
+    # Fetch
+    f = fetch --all --prune
+    
+    # Diff
+    d = diff
+    ds = diff --staged
+    dc = diff --cached
+    
+    # Log
+    l = log --oneline -20
+    lg = log --oneline --graph --decorate -20
+    lga = log --oneline --graph --decorate --all -30
+    ll = log --pretty=format:'%C(yellow)%h%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' -20
+    
+    # Stash
+    ss = stash
+    sp = stash pop
+    sl = stash list
+    sa = stash apply
+    sd = stash drop
+    
+    # Reset
+    unstage = reset HEAD --
+    undo = reset --soft HEAD~1
+    hard = reset --hard HEAD
+    
+    # Clean
+    clean-branches = "!git branch --merged | grep -v '\\*\\|main\\|master\\|develop' | xargs -n 1 git branch -d"
+    
+    # Utility
+    aliases = config --get-regexp alias
+    contributors = shortlog --summary --numbered
+    last = log -1 HEAD --format=format:'%Cred%H%Creset - %Cgreen%s%Creset'
+    
+    # WIP (Work In Progress)
+    wip = "!git add -A && git commit -m 'WIP: work in progress'"
+    unwip = reset HEAD~1
+    
+    # Sync with main
+    sync = "!git fetch origin && git rebase origin/main"
+
+[credential]
+    helper = cache --timeout=3600
+
+[help]
+    autocorrect = 10
+
+[url "git@github.com:"]
+    insteadOf = gh:
+
+[url "git@gitlab.com:"]
+    insteadOf = gl:
+
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true

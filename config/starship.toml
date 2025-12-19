@@ -1,0 +1,118 @@
+# ==============================================================================
+# Starship Prompt Configuration (Alternative to Powerlevel10k)
+# ==============================================================================
+# Install: curl -sS https://starship.rs/install.sh | sh
+# Add to .zshrc: eval "$(starship init zsh)"
+# ==============================================================================
+
+# General
+add_newline = true
+format = """
+[╭─](242)$os$username$hostname$directory$git_branch$git_status$docker_context$nodejs$python$rust$golang
+[╰─](242)$character"""
+
+# Prompt character
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vicmd_symbol = "[❮](bold green)"
+
+# OS Icon
+[os]
+format = "[$symbol]($style) "
+style = "bold white"
+disabled = false
+
+[os.symbols]
+Fedora = ""
+Linux = ""
+Macos = ""
+Ubuntu = ""
+Windows = ""
+
+# Username
+[username]
+show_always = false
+style_user = "bold yellow"
+style_root = "bold red"
+format = "[$user]($style) "
+
+# Hostname
+[hostname]
+ssh_only = true
+format = "[@$hostname]($style) "
+style = "bold dimmed white"
+
+# Directory
+[directory]
+style = "bold cyan"
+truncation_length = 3
+truncate_to_repo = true
+format = "[$path]($style)[$read_only]($read_only_style) "
+
+# Git branch
+[git_branch]
+symbol = " "
+style = "bold purple"
+format = "[$symbol$branch]($style) "
+
+# Git status
+[git_status]
+format = '([$all_status$ahead_behind]($style) )'
+style = "bold yellow"
+conflicted = "🏳"
+up_to_date = ""
+untracked = "?"
+ahead = "⇡${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+behind = "⇣${count}"
+stashed = "📦"
+modified = "!"
+staged = "+"
+renamed = "»"
+deleted = "✘"
+
+# Docker
+[docker_context]
+symbol = " "
+style = "blue bold"
+format = "[$symbol$context]($style) "
+only_with_files = true
+
+# Node.js
+[nodejs]
+symbol = " "
+style = "bold green"
+format = "[$symbol($version)]($style) "
+detect_files = ["package.json", ".node-version"]
+detect_folders = ["node_modules"]
+
+# Python
+[python]
+symbol = " "
+style = "bold yellow"
+format = '[${symbol}${pyenv_prefix}(${version})(\($virtualenv\))]($style) '
+
+# Rust
+[rust]
+symbol = " "
+style = "bold red"
+format = "[$symbol($version)]($style) "
+
+# Golang
+[golang]
+symbol = " "
+style = "bold cyan"
+format = "[$symbol($version)]($style) "
+
+# Command duration
+[cmd_duration]
+min_time = 3_000
+format = "took [$duration](bold yellow) "
+
+# Time
+[time]
+disabled = false
+format = "[$time]($style) "
+style = "bold dimmed white"
+time_format = "%H:%M"
