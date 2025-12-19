@@ -1,0 +1,111 @@
+# ==============================================================================
+# SSH Client Configuration
+# ==============================================================================
+# Place symlink: ln -s ~/dotfiles/config/ssh/config ~/.ssh/config
+# ==============================================================================
+
+# ==============================================================================
+# GLOBAL DEFAULTS
+# ==============================================================================
+Host *
+    # Security
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+    
+    # Connection keep-alive
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    
+    # Performance
+    Compression yes
+    
+    # Convenience
+    HashKnownHosts no
+    StrictHostKeyChecking ask
+
+# ==============================================================================
+# GITHUB
+# ==============================================================================
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    PreferredAuthentications publickey
+
+Host github-personal
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_personal
+    PreferredAuthentications publickey
+
+Host github-work
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_work
+    PreferredAuthentications publickey
+
+# ==============================================================================
+# GITLAB
+# ==============================================================================
+Host gitlab.com
+    HostName gitlab.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    PreferredAuthentications publickey
+
+# ==============================================================================
+# BITBUCKET
+# ==============================================================================
+Host bitbucket.org
+    HostName bitbucket.org
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    PreferredAuthentications publickey
+
+# ==============================================================================
+# CODEBERG
+# ==============================================================================
+Host codeberg.org
+    HostName codeberg.org
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    PreferredAuthentications publickey
+
+# ==============================================================================
+# EXAMPLE: LOCAL/REMOTE SERVERS
+# ==============================================================================
+# Uncomment and modify as needed
+
+# Host myserver
+#     HostName 192.168.1.100
+#     User myuser
+#     IdentityFile ~/.ssh/id_ed25519
+#     Port 22
+#     ForwardAgent yes
+
+# Host production
+#     HostName prod.example.com
+#     User deploy
+#     IdentityFile ~/.ssh/id_ed25519_production
+#     Port 22
+#     ForwardAgent no
+
+# Host dev
+#     HostName dev.example.com
+#     User developer
+#     IdentityFile ~/.ssh/id_ed25519
+#     LocalForward 3000 localhost:3000
+#     LocalForward 5432 localhost:5432
+
+# ==============================================================================
+# JUMP HOST / BASTION EXAMPLE
+# ==============================================================================
+# Host bastion
+#     HostName bastion.example.com
+#     User jump-user
+#     IdentityFile ~/.ssh/id_ed25519
+
+# Host internal-server
+#     HostName 10.0.0.50
+#     User admin
+#     ProxyJump bastion

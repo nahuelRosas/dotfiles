@@ -123,6 +123,53 @@ flatpak: ## Install Flatpak applications
 	@chmod +x scripts/setup-flatpak.sh
 	@./scripts/setup-flatpak.sh
 
+ssh: ## Configure SSH keys for GitHub
+	@echo "$(CYAN)Configuring SSH keys...$(NC)"
+	@chmod +x scripts/setup-ssh.sh
+	@./scripts/setup-ssh.sh
+
+gpg: ## Configure GPG for commit signing
+	@echo "$(CYAN)Configuring GPG...$(NC)"
+	@./install.sh --gpg-only 2>/dev/null || echo "Run full install or configure GPG manually"
+
+verify: ## Verify installation status
+	@chmod +x scripts/verify-install.sh
+	@./scripts/verify-install.sh
+
+theme: ## Switch color theme (usage: make theme THEME=dracula)
+	@chmod +x scripts/set-theme.sh
+	@./scripts/set-theme.sh $(THEME)
+
+sync: ## Sync dotfiles with remote repository
+	@chmod +x scripts/sync-dotfiles.sh
+	@./scripts/sync-dotfiles.sh
+
+tmux: ## Install and configure Tmux
+	@echo "$(CYAN)Setting up Tmux...$(NC)"
+	@command -v tmux > /dev/null || sudo dnf install -y tmux
+	@mkdir -p ~/.config/tmux
+	@ln -sf $(PWD)/config/tmux/tmux.conf ~/.config/tmux/tmux.conf
+	@echo "$(GREEN)Tmux configured. Install TPM: git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm$(NC)"
+
+alacritty: ## Configure Alacritty terminal
+	@echo "$(CYAN)Setting up Alacritty...$(NC)"
+	@mkdir -p ~/.config/alacritty
+	@ln -sf $(PWD)/config/alacritty/alacritty.toml ~/.config/alacritty/alacritty.toml
+	@ln -sf $(PWD)/config/alacritty/dracula.toml ~/.config/alacritty/dracula.toml
+	@echo "$(GREEN)Alacritty configured$(NC)"
+
+nvim: ## Configure Neovim
+	@echo "$(CYAN)Setting up Neovim...$(NC)"
+	@mkdir -p ~/.config/nvim
+	@ln -sf $(PWD)/config/nvim/init.lua ~/.config/nvim/init.lua
+	@echo "$(GREEN)Neovim configured. Run 'nvim' to install plugins.$(NC)"
+
+lazygit: ## Configure Lazygit
+	@echo "$(CYAN)Setting up Lazygit...$(NC)"
+	@mkdir -p ~/.config/lazygit
+	@ln -sf $(PWD)/config/lazygit/config.yml ~/.config/lazygit/config.yml
+	@echo "$(GREEN)Lazygit configured$(NC)"
+
 status: ## Show current dotfiles status
 	@echo ""
 	@echo "$(CYAN)Dotfiles Status$(NC)"
@@ -133,6 +180,8 @@ status: ## Show current dotfiles status
 	@echo "P10k: $$([[ -d ~/.oh-my-zsh/custom/themes/powerlevel10k ]] && echo 'installed' || echo 'not installed')"
 	@echo "NVM: $$(command -v nvm >/dev/null && nvm --version || echo 'not installed')"
 	@echo "Docker: $$(command -v docker >/dev/null && docker --version | awk '{print $$3}' | tr -d ',' || echo 'not installed')"
+	@echo "Theme: $$(cat .current-theme 2>/dev/null || echo 'not set')"
 	@echo ""
 	@echo "Backups: $$(ls -d ~/.dotfiles-backup-* 2>/dev/null | wc -l)"
 	@echo ""
+

@@ -63,6 +63,9 @@ PACKAGES=(
     "xclip"
     "tmux"
     "screen"
+    
+    # Security
+    "keepassxc"
 )
 
 # Install packages with --skip-unavailable flag

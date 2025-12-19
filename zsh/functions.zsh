@@ -420,3 +420,223 @@ todo() {
             ;;
     esac
 }
+
+# ==============================================================================
+# DOTFILES MANAGEMENT
+# ==============================================================================
+
+# Update dotfiles from repository
+dotfiles_update() {
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+    
+    if [[ ! -d "$dotfiles_dir" ]]; then
+        echo "❌ Dotfiles directory not found: $dotfiles_dir"
+        return 1
+    fi
+    
+    echo "🔄 Updating dotfiles..."
+    
+    (
+        cd "$dotfiles_dir"
+        
+        # Check for uncommitted changes
+        if ! git diff --quiet 2>/dev/null; then
+            echo "⚠️  You have uncommitted changes in dotfiles"
+            echo ""
+            git status --short
+            echo ""
+            read -q "?Stash changes and continue? [y/N]: " || { echo "\nCancelled."; return 1; }
+            echo ""
+            git stash push -m "Auto-stash before update"
+        fi
+        
+        # Pull latest changes
+        echo "📥 Pulling latest changes..."
+        git pull --rebase
+        
+        # Re-source zshrc
+        echo "🔃 Reloading shell configuration..."
+        source ~/.zshrc
+        
+        echo "✅ Dotfiles updated!"
+    )
+}
+
+# Verify dotfiles installation
+dotfiles_verify() {
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+    
+    if [[ -f "$dotfiles_dir/scripts/verify-install.sh" ]]; then
+        bash "$dotfiles_dir/scripts/verify-install.sh"
+    else
+        echo "❌ Verification script not found"
+        return 1
+    fi
+}
+
+# Quick dotfiles status
+dotfiles_status() {
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+    
+    echo "📁 Dotfiles: $dotfiles_dir"
+    echo ""
+    
+    if [[ -d "$dotfiles_dir/.git" ]]; then
+        (
+            cd "$dotfiles_dir"
+            local branch=$(git branch --show-current)
+            local ahead=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo "?")
+            local behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "?")
+            
+            echo "🌿 Branch: $branch"
+            echo "📊 Ahead: $ahead | Behind: $behind"
+            
+            if ! git diff --quiet 2>/dev/null; then
+                echo ""
+                echo "📝 Uncommitted changes:"
+                git status --short
+            fi
+        )
+    else
+        echo "⚠️  Not a git repository"
+    fi
+}
+
+# ==============================================================================
+# ADDITIONAL UTILITIES
+# ==============================================================================
+
+# Backup file quickly
+bak() {
+    [[ -z "$1" ]] && { echo "Usage: bak <file>"; return 1; }
+    cp -v "$1" "${1}.bak.$(date +%Y%m%d-%H%M%S)"
+}
+
+# Restore backup (removes .bak extension)
+unbak() {
+    [[ -z "$1" ]] && { echo "Usage: unbak <file.bak>"; return 1; }
+    local original="${1%.bak*}"
+    [[ "$original" == "$1" ]] && { echo "Not a backup file"; return 1; }
+    mv -v "$1" "$original"
+}
+
+# Create executable script
+mkscript() {
+    local script="${1:-script.sh}"
+    [[ -f "$script" ]] && { echo "File exists: $script"; return 1; }
+    
+    cat > "$script" << 'EOF'
+#!/bin/bash
+set -e
+
+# Your script here
+
+EOF
+    chmod +x "$script"
+    ${EDITOR:-cursor} "$script"
+}
+
+# Git clone and cd into directory
+gclone() {
+    [[ -z "$1" ]] && { echo "Usage: gclone <repo-url>"; return 1; }
+    git clone "$1" && cd "$(basename "$1" .git)"
+}
+
+# Benchmark command (requires hyperfine)
+bench() {
+    if command -v hyperfine &>/dev/null; then
+        hyperfine --warmup 3 "$@"
+    else
+        echo "hyperfine not installed. Installing..."
+        sudo dnf install -y hyperfine 2>/dev/null || cargo install hyperfine
+        hyperfine --warmup 3 "$@"
+    fi
+}
+
+# Load environment variables from .env file
+loadenv() {
+    local envfile="${1:-.env}"
+    [[ ! -f "$envfile" ]] && { echo "File not found: $envfile"; return 1; }
+    
+    echo "Loading environment from $envfile"
+    set -a
+    source "$envfile"
+    set +a
+}
+
+# Forward local port through SSH
+portfwd() {
+    [[ $# -lt 2 ]] && { echo "Usage: portfwd <remote-host> <port> [local-port]"; return 1; }
+    local host="$1"
+    local remote_port="$2"
+    local local_port="${3:-$remote_port}"
+    
+    echo "Forwarding localhost:$local_port -> $host:$remote_port"
+    ssh -N -L "$local_port:localhost:$remote_port" "$host"
+}
+
+# Show all terminal colors
+colors() {
+    for i in {0..255}; do
+        printf "\x1b[38;5;${i}m%3d " "$i"
+        (( (i + 1) % 16 == 0 )) && echo ""
+    done
+    echo ""
+}
+
+# Switch theme across all tools
+set_theme() {
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+    bash "$dotfiles_dir/scripts/set-theme.sh" "$@"
+}
+
+# Sync dotfiles with remote
+dotfiles_sync() {
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+    bash "$dotfiles_dir/scripts/sync-dotfiles.sh"
+}
+
+# Show system resource usage summary
+sysload() {
+    echo "╭───────────────────────────────────────╮"
+    echo "│  📊 System Load                       │"
+    echo "╰───────────────────────────────────────╯"
+    echo " CPU: $(grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {printf "%.1f%%", usage}')"
+    echo " RAM: $(free | awk '/Mem:/ {printf "%.1f%%", $3/$2 * 100}')"
+    echo " Disk: $(df -h / | awk 'NR==2 {print $5}')"
+    echo " Procs: $(ps aux | wc -l)"
+}
+
+# Kill process by port
+killport() {
+    [[ -z "$1" ]] && { echo "Usage: killport <port>"; return 1; }
+    local pids=$(lsof -t -i ":$1" 2>/dev/null)
+    
+    if [[ -z "$pids" ]]; then
+        echo "No process found on port $1"
+    else
+        echo "Killing processes on port $1: $pids"
+        echo "$pids" | xargs kill -9
+    fi
+}
+
+# Retry command N times
+retry() {
+    local max_attempts="${1:-3}"
+    shift
+    local count=0
+    
+    until "$@"; do
+        exit_code=$?
+        count=$((count + 1))
+        
+        if [[ $count -lt $max_attempts ]]; then
+            echo "Attempt $count failed. Retrying..."
+            sleep 1
+        else
+            echo "Command failed after $count attempts."
+            return $exit_code
+        fi
+    done
+}
+

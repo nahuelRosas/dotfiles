@@ -231,3 +231,173 @@ if command -v npm &>/dev/null; then
 fi
 
 echo "✅ Cloud CLI tools setup complete"
+
+# ==============================================================================
+# CLOUD CLI AUTHENTICATION (Interactive)
+# ==============================================================================
+configure_cloud_auth() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "🔐 Cloud CLI Authentication"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Would you like to authenticate with installed cloud services?"
+    echo "(You can skip any service you don't want to configure)"
+    echo ""
+    
+    read -p "Proceed with authentication setup? [Y/n]: " do_auth
+    do_auth=${do_auth:-Y}
+    
+    if [[ ! "$do_auth" =~ ^[Yy] ]]; then
+        echo "⏭️ Skipping authentication setup"
+        return 0
+    fi
+    
+    # --- GitHub CLI ---
+    if command -v gh &>/dev/null; then
+        echo ""
+        echo "📦 GitHub CLI (gh)"
+        if gh auth status &>/dev/null 2>&1; then
+            echo "  ✅ Already authenticated"
+        else
+            read -p "  Authenticate with GitHub? [Y/n]: " auth_gh
+            auth_gh=${auth_gh:-Y}
+            if [[ "$auth_gh" =~ ^[Yy] ]]; then
+                gh auth login
+            fi
+        fi
+    fi
+    
+    # --- Google Cloud ---
+    if command -v gcloud &>/dev/null; then
+        echo ""
+        echo "📦 Google Cloud SDK (gcloud)"
+        local gcloud_account=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null)
+        if [[ -n "$gcloud_account" ]]; then
+            echo "  ✅ Already authenticated as: $gcloud_account"
+            read -p "  Re-authenticate or add another account? [y/N]: " reauth_gcloud
+            if [[ "$reauth_gcloud" =~ ^[Yy] ]]; then
+                gcloud auth login
+            fi
+        else
+            read -p "  Authenticate with Google Cloud? [Y/n]: " auth_gcloud
+            auth_gcloud=${auth_gcloud:-Y}
+            if [[ "$auth_gcloud" =~ ^[Yy] ]]; then
+                gcloud auth login
+                # Also set up application default credentials
+                read -p "  Also set up Application Default Credentials (for local dev)? [Y/n]: " adc_gcloud
+                adc_gcloud=${adc_gcloud:-Y}
+                if [[ "$adc_gcloud" =~ ^[Yy] ]]; then
+                    gcloud auth application-default login
+                fi
+            fi
+        fi
+    fi
+    
+    # --- AWS CLI ---
+    if command -v aws &>/dev/null; then
+        echo ""
+        echo "📦 AWS CLI"
+        if aws sts get-caller-identity &>/dev/null 2>&1; then
+            local aws_account=$(aws sts get-caller-identity --query "Account" --output text 2>/dev/null)
+            echo "  ✅ Already authenticated (Account: $aws_account)"
+        else
+            read -p "  Configure AWS credentials? [Y/n]: " auth_aws
+            auth_aws=${auth_aws:-Y}
+            if [[ "$auth_aws" =~ ^[Yy] ]]; then
+                echo ""
+                echo "  Choose authentication method:"
+                echo "    1) AWS SSO (recommended for organizations)"
+                echo "    2) Access Key ID and Secret Access Key"
+                echo "    3) Skip"
+                echo ""
+                read -p "  Select [1]: " aws_method
+                aws_method=${aws_method:-1}
+                
+                case $aws_method in
+                    1)
+                        echo "  Starting AWS SSO configuration..."
+                        aws configure sso
+                        ;;
+                    2)
+                        echo "  Starting AWS credential configuration..."
+                        aws configure
+                        ;;
+                    *)
+                        echo "  ⏭️ Skipping AWS authentication"
+                        ;;
+                esac
+            fi
+        fi
+    fi
+    
+    # --- Firebase CLI ---
+    if command -v firebase &>/dev/null; then
+        echo ""
+        echo "📦 Firebase CLI"
+        # Firebase doesn't have a simple status check, so we try listing projects
+        if firebase projects:list &>/dev/null 2>&1; then
+            echo "  ✅ Already authenticated"
+        else
+            read -p "  Authenticate with Firebase? [Y/n]: " auth_firebase
+            auth_firebase=${auth_firebase:-Y}
+            if [[ "$auth_firebase" =~ ^[Yy] ]]; then
+                firebase login
+            fi
+        fi
+    fi
+    
+    # --- Vercel CLI ---
+    if command -v vercel &>/dev/null; then
+        echo ""
+        echo "📦 Vercel CLI"
+        if vercel whoami &>/dev/null 2>&1; then
+            local vercel_user=$(vercel whoami 2>/dev/null)
+            echo "  ✅ Already authenticated as: $vercel_user"
+        else
+            read -p "  Authenticate with Vercel? [Y/n]: " auth_vercel
+            auth_vercel=${auth_vercel:-Y}
+            if [[ "$auth_vercel" =~ ^[Yy] ]]; then
+                vercel login
+            fi
+        fi
+    fi
+    
+    # --- Netlify CLI ---
+    if command -v netlify &>/dev/null; then
+        echo ""
+        echo "📦 Netlify CLI"
+        if netlify status &>/dev/null 2>&1; then
+            echo "  ✅ Already authenticated"
+        else
+            read -p "  Authenticate with Netlify? [Y/n]: " auth_netlify
+            auth_netlify=${auth_netlify:-Y}
+            if [[ "$auth_netlify" =~ ^[Yy] ]]; then
+                netlify login
+            fi
+        fi
+    fi
+    
+    # --- Terraform Cloud ---
+    if command -v terraform &>/dev/null; then
+        echo ""
+        echo "📦 Terraform"
+        if [[ -f "$HOME/.terraform.d/credentials.tfrc.json" ]]; then
+            echo "  ✅ Terraform Cloud credentials found"
+        else
+            read -p "  Configure Terraform Cloud login? [y/N]: " auth_terraform
+            if [[ "$auth_terraform" =~ ^[Yy] ]]; then
+                terraform login
+            fi
+        fi
+    fi
+    
+    echo ""
+    echo "✅ Cloud authentication setup complete!"
+}
+
+# Run authentication if not skipped via environment variable
+if [[ "${SKIP_CLOUD_AUTH:-false}" != "true" ]]; then
+    configure_cloud_auth
+fi
+

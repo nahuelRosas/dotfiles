@@ -80,6 +80,21 @@ if command -v poetry &>/dev/null; then
     fi
 fi
 
+# GitHub CLI completion
+if command -v gh &>/dev/null; then
+    eval "$(gh completion -s zsh 2>/dev/null)" || true
+fi
+
+# Terraform completion
+if command -v terraform &>/dev/null; then
+    complete -o nospace -C terraform terraform 2>/dev/null || true
+fi
+
+# Helm completion
+if command -v helm &>/dev/null; then
+    source <(helm completion zsh 2>/dev/null) || true
+fi
+
 # ==============================================================================
 # FZF COMPLETIONS
 # ==============================================================================

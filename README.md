@@ -1,6 +1,9 @@
-# 🚀 Dotfiles - Optimized Configuration for Fedora
+# 🚀 Dotfiles - Terminal Configuration Framework
 
 [![Fedora](https://img.shields.io/badge/Fedora-294172?style=for-the-badge&logo=fedora&logoColor=white)](https://getfedora.org/)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com/)
+[![Arch](https://img.shields.io/badge/Arch_Linux-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white)](https://archlinux.org/)
+[![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://www.apple.com/macos)
 [![Zsh](https://img.shields.io/badge/Zsh-F15A24?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.zsh.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
@@ -9,10 +12,12 @@ Terminal configuration optimized for maximum performance and productivity.
 ## ⚡ Features
 
 - **Load time <100ms** - Lazy loading and optimized cache
+- **Multi-distro support** - Fedora, Ubuntu/Debian, Arch Linux, macOS
 - **Interactive installer** - Sudo upfront, backup options, install/reinstall modes
 - **Powerlevel10k** - Beautiful and informative prompt
-- **50+ aliases** - Simplified frequent commands
-- **25+ functions** - Development utilities
+- **Theme system** - Switch between Dracula, Catppuccin, and more
+- **80+ aliases** - Simplified frequent commands
+- **50+ functions** - Development utilities
 - **NVIDIA GPU support** - Automatic detection and driver installation
 - **VPN ready** - OpenVPN and WireGuard support
 
@@ -20,14 +25,15 @@ Terminal configuration optimized for maximum performance and productivity.
 
 | Category | Tools |
 |----------|-------|
-| 🐚 Shell | Zsh, Oh-My-Zsh, Powerlevel10k |
-| 📝 Editor | VSCode, Cursor |
+| 🐚 Shell | Zsh, Oh-My-Zsh, Powerlevel10k, Starship (alt) |
+| 📝 Editor | VSCode, Cursor, Neovim |
+| 🖥️ Terminal | Kitty, Alacritty, Tmux |
 | 🔍 Search | FZF, Ripgrep, fd-find |
 | 📁 Files | lsd, eza, bat, colorls |
-| 🐳 Containers | Docker, Docker Compose |
+| 🐳 Containers | Docker, Docker Compose, Lazydocker |
 | 🌐 Browser | Brave |
-| 📦 Node | NVM, Node LTS, PNPM |
-| 🐍 Python | Miniconda |
+| 📦 Node | NVM, Node LTS, PNPM, Bun |
+| 🐍 Python | Miniconda, pyenv |
 | 🔧 Utils | lazygit, btop, zoxide, tldr, duf, procs, dust |
 | 🔐 VPN | OpenVPN, WireGuard |
 | 🎮 GPU | NVIDIA drivers (auto-detect) |
@@ -41,16 +47,18 @@ cd ~/dotfiles
 ```
 
 The installer will:
-1. Request sudo access upfront
-2. Ask about backup preferences
-3. Let you choose fresh install or reinstall mode
-4. Offer optional components (NVIDIA drivers, VPN tools)
+1. **Detect your OS** (Fedora, Ubuntu, Debian, Arch, macOS)
+2. Request sudo access upfront
+3. Ask about backup preferences
+4. Let you choose fresh install or reinstall mode
+5. Offer optional components (NVIDIA drivers, VPN tools)
 
 ## 📋 Requirements
 
-- **OS:** Fedora 38+ (tested on Fedora 43)
+- **OS:** Fedora 38+, Ubuntu 22.04+, Debian 12+, Arch Linux, macOS 13+
 - **RAM:** 4GB minimum
 - **Internet:** Required for installation
+
 
 ## 🔧 Make Commands
 
@@ -81,6 +89,11 @@ make clean            # Remove compiled files
 make status           # Show current status
 make lint             # Check scripts for errors
 make help             # Show all commands
+
+# Security & Authentication
+make ssh              # Configure SSH keys for GitHub
+make gpg              # Configure GPG for commit signing  
+make verify           # Verify installation status
 ```
 
 ## 📁 Structure
@@ -130,6 +143,9 @@ dotfiles/
 | `dshell` | Shell into Docker container |
 | `fkill` | Kill process interactively |
 | `sysinfo` | System information |
+| `dotfiles_update` | Update dotfiles from repo |
+| `dotfiles_verify` | Verify installation |
+| `dotfiles_status` | Show repo status |
 
 ## 🎨 Customization
 
@@ -157,12 +173,9 @@ make update
 
 1. **Restart the terminal** or run `exec zsh`
 2. **Configure p10k** with `p10k configure`
-3. **Add SSH keys** to `~/.ssh/`
-4. **Configure Git:**
-   ```bash
-   git config --global user.name "Your Name"
-   git config --global user.email "your@email.com"
-   ```
+3. **Setup SSH keys**: `make ssh` or run `./scripts/setup-ssh.sh`
+4. **Setup GPG signing**: `make gpg` (for verified commits)
+5. **Verify installation**: `make verify` or run `dotfiles_verify`
 
 ## 🐛 Troubleshooting
 

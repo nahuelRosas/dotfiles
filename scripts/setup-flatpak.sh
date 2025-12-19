@@ -31,7 +31,7 @@ APPS=(
     # Productivity
     "com.wps.Office"
     "md.obsidian.Obsidian"
-    "org.keepassxc.KeePassXC"
+    # "org.keepassxc.KeePassXC"  # Install via DNF instead: sudo dnf install keepassxc
     
     # Media
     "com.mastermindzh.tidal-hifi"

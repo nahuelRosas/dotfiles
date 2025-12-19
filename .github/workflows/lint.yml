@@ -1,0 +1,110 @@
+name: Lint Scripts
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**.sh'
+      - '**.zsh'
+      - 'Makefile'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '**.sh'
+      - '**.zsh'
+      - 'Makefile'
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './scripts'
+          additional_files: 'install.sh uninstall.sh'
+          severity: warning
+        env:
+          SHELLCHECK_OPTS: -e SC1091 -e SC2034
+
+  shfmt:
+    name: Shell Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install shfmt
+        run: |
+          curl -sS https://webinstall.dev/shfmt | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+      - name: Check shell script formatting
+        run: |
+          shfmt -d -i 4 -ci scripts/*.sh install.sh uninstall.sh || echo "Formatting issues found (non-blocking)"
+
+  yaml-lint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run yamllint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: '**/*.yml **/*.yaml'
+          config_file: .yamllint.yml
+        continue-on-error: true
+
+  markdown-lint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run markdownlint
+        uses: articulate/actions-markdownlint@v1
+        with:
+          files: '*.md'
+        continue-on-error: true
+
+  test-install:
+    name: Test Installation
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          dnf install -y git sudo which
+      
+      - name: Syntax check install script
+        run: |
+          bash -n install.sh
+          for script in scripts/*.sh; do
+            bash -n "$script" && echo "✓ $script"
+          done
+      
+      - name: Check script permissions
+        run: |
+          for script in install.sh uninstall.sh scripts/*.sh; do
+            if [[ -x "$script" ]]; then
+              echo "✓ $script is executable"
+            else
+              echo "⚠ $script is not executable"
+            fi
+          done

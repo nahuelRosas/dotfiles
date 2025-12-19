@@ -72,14 +72,62 @@ EOF
 # Pre-flight Checks
 # ==============================================================================
 
-check_fedora() {
-    if [[ ! -f /etc/fedora-release ]]; then
-        print_error "This script is designed for Fedora."
-        print_warning "Detected system: $(cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2)"
+# Distro detection variables
+DISTRO=""
+PKG_MANAGER=""
+PKG_INSTALL=""
+PKG_UPDATE=""
+
+detect_distro() {
+    if [[ -f /etc/fedora-release ]]; then
+        DISTRO="fedora"
+        PKG_MANAGER="dnf"
+        PKG_INSTALL="sudo dnf install -y"
+        PKG_UPDATE="sudo dnf upgrade -y"
+        print_success "Fedora detected: $(cat /etc/fedora-release)"
+    elif [[ -f /etc/debian_version ]]; then
+        if [[ -f /etc/lsb-release ]] && grep -q "Ubuntu" /etc/lsb-release; then
+            DISTRO="ubuntu"
+        else
+            DISTRO="debian"
+        fi
+        PKG_MANAGER="apt"
+        PKG_INSTALL="sudo apt install -y"
+        PKG_UPDATE="sudo apt update && sudo apt upgrade -y"
+        print_success "$DISTRO detected: $(cat /etc/debian_version)"
+    elif [[ -f /etc/arch-release ]]; then
+        DISTRO="arch"
+        PKG_MANAGER="pacman"
+        PKG_INSTALL="sudo pacman -S --noconfirm"
+        PKG_UPDATE="sudo pacman -Syu --noconfirm"
+        print_success "Arch Linux detected"
+    elif [[ "$(uname)" == "Darwin" ]]; then
+        DISTRO="macos"
+        PKG_MANAGER="brew"
+        PKG_INSTALL="brew install"
+        PKG_UPDATE="brew update && brew upgrade"
+        print_success "macOS detected: $(sw_vers -productVersion)"
+        
+        # Check for Homebrew
+        if ! command -v brew &>/dev/null; then
+            print_warning "Homebrew not found. Installing..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        fi
+    else
+        print_error "Unsupported operating system"
+        print_warning "Detected: $(cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d= -f2 || uname -s)"
+        print_warning "Supported: Fedora, Ubuntu/Debian, Arch Linux, macOS"
         exit 1
     fi
-    print_success "Fedora detected: $(cat /etc/fedora-release)"
+    
+    export DISTRO PKG_MANAGER PKG_INSTALL PKG_UPDATE
 }
+
+# Legacy function for backward compatibility
+check_fedora() {
+    detect_distro
+}
+
 
 request_sudo() {
     print_header "🔐 Requesting Administrator Privileges"
@@ -187,12 +235,14 @@ show_extras_menu() {
         [[ "$nvidia_choice" =~ ^[Yy] ]] && INSTALL_NVIDIA=true
     fi
     
-    # VPN option
-    read -p "Install VPN tools (OpenVPN + WireGuard)? [y/N]: " vpn_choice
+    # VPN option (default: Yes)
+    read -p "Install VPN tools (OpenVPN + WireGuard)? [Y/n]: " vpn_choice
+    vpn_choice=${vpn_choice:-Y}
     [[ "$vpn_choice" =~ ^[Yy] ]] && INSTALL_VPN=true
     
-    # Cloud CLI option
-    read -p "Install Cloud CLIs (AWS, GCloud, Firebase, Terraform, kubectl)? [y/N]: " cloud_choice
+    # Cloud CLI option (default: Yes)
+    read -p "Install Cloud CLIs (AWS, GCloud, Firebase, Terraform, kubectl)? [Y/n]: " cloud_choice
+    cloud_choice=${cloud_choice:-Y}
     [[ "$cloud_choice" =~ ^[Yy] ]] && INSTALL_CLOUD=true
 }
 
@@ -526,6 +576,375 @@ configure_git() {
     git config --global user.email "$git_email"
     
     print_success "Git configured for: $git_name <$git_email>"
+    
+    # Check if email matches any existing GPG key
+    if command -v gpg &>/dev/null; then
+        local gpg_emails=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oP '(?<=<)[^>]+(?=>)' | sort -u)
+        
+        if [[ -n "$gpg_emails" ]]; then
+            if ! echo "$gpg_emails" | grep -q "^${git_email}$"; then
+                echo ""
+                echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "${YELLOW}⚠ WARNING: Git email does not match any GPG key${NC}"
+                echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo ""
+                echo -e "Git email: ${CYAN}$git_email${NC}"
+                echo -e "GPG key email(s):"
+                echo "$gpg_emails" | while read email; do
+                    echo -e "  • ${GREEN}$email${NC}"
+                done
+                echo ""
+                echo -e "${BOLD}Your commits won't show as 'Verified' on GitHub unless emails match.${NC}"
+                echo ""
+                echo "Options:"
+                echo "  1) Create a NEW GPG key for $git_email"
+                echo "  2) Change Git email to match existing GPG key"
+                echo "  3) Continue anyway (commits won't be verified)"
+                echo ""
+                
+                read -p "Select option [1]: " gpg_mismatch_choice
+                gpg_mismatch_choice=${gpg_mismatch_choice:-1}
+                
+                case $gpg_mismatch_choice in
+                    1)
+                        echo ""
+                        print_step "A new GPG key will be created during GPG configuration..."
+                        ;;
+                    2)
+                        local first_gpg_email=$(echo "$gpg_emails" | head -1)
+                        echo ""
+                        echo "Available GPG emails:"
+                        local i=1
+                        echo "$gpg_emails" | while read email; do
+                            echo "  $i) $email"
+                            ((i++))
+                        done
+                        echo ""
+                        read -p "Select email number [1]: " email_choice
+                        email_choice=${email_choice:-1}
+                        local selected_email=$(echo "$gpg_emails" | sed -n "${email_choice}p")
+                        selected_email=${selected_email:-$first_gpg_email}
+                        
+                        git config --global user.email "$selected_email"
+                        git_email="$selected_email"
+                        print_success "Git email changed to: $selected_email"
+                        ;;
+                    3)
+                        print_warning "Continuing without GPG email match. Commits won't be verified."
+                        ;;
+                esac
+            fi
+        fi
+    fi
+}
+
+configure_gpg() {
+    print_header "🔐 GPG Configuration for Commit Signing"
+    
+    # Check if gpg is installed
+    if ! command -v gpg &>/dev/null; then
+        print_warning "GPG not installed. Installing..."
+        sudo dnf install -y gnupg2
+    fi
+    
+    # Get current Git identity
+    local git_name=$(git config --global user.name 2>/dev/null || echo "")
+    local git_email=$(git config --global user.email 2>/dev/null || echo "")
+    
+    if [[ -z "$git_email" ]]; then
+        print_error "Git email not configured. Please run 'git config --global user.email' first."
+        return 1
+    fi
+    
+    echo -e "${CYAN}Git identity:${NC} $git_name <$git_email>\n"
+    
+    # Check for existing GPG keys
+    local gpg_output=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null)
+    local gpg_keys=$(echo "$gpg_output" | grep -E "^sec" | awk '{print $2}' | cut -d'/' -f2)
+    
+    local selected_key=""
+    local need_new_key=false
+    
+    if [[ -z "$gpg_keys" ]]; then
+        echo -e "${YELLOW}No GPG keys found.${NC}\n"
+        need_new_key=true
+    else
+        # Show existing keys with their emails
+        echo -e "${GREEN}Found existing GPG key(s):${NC}\n"
+        
+        local key_info=""
+        local match_found=false
+        
+        while IFS= read -r key_id; do
+            [[ -z "$key_id" ]] && continue
+            
+            local key_email=$(gpg --list-secret-keys --keyid-format=long "$key_id" 2>/dev/null | grep -oP '(?<=<)[^>]+(?=>)' | head -1)
+            local key_name=$(gpg --list-secret-keys --keyid-format=long "$key_id" 2>/dev/null | grep "^uid" | sed 's/uid.*\] //' | sed 's/ <.*//' | head -1)
+            
+            echo -e "  ${BOLD}Key:${NC} $key_id"
+            echo -e "  ${BOLD}Name:${NC} $key_name"
+            echo -e "  ${BOLD}Email:${NC} $key_email"
+            
+            if [[ "$key_email" == "$git_email" ]]; then
+                echo -e "  ${GREEN}✓ Matches Git email${NC}"
+                match_found=true
+                selected_key="$key_id"
+            else
+                echo -e "  ${YELLOW}⚠ Does NOT match Git email ($git_email)${NC}"
+            fi
+            echo ""
+        done <<< "$gpg_keys"
+        
+        if [[ "$match_found" == false ]]; then
+            echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            echo -e "${YELLOW}⚠ WARNING: No GPG key matches your Git email ($git_email)${NC}"
+            echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            echo ""
+            echo -e "${BOLD}Options:${NC}"
+            echo "  1) Create a NEW GPG key with your Git email (recommended)"
+            echo "  2) Use existing key anyway (commits may not be verified on GitHub)"
+            echo "  3) Change Git email to match existing GPG key"
+            echo "  4) Skip GPG configuration"
+            echo ""
+            
+            read -p "Select option [1]: " mismatch_choice
+            mismatch_choice=${mismatch_choice:-1}
+            
+            case $mismatch_choice in
+                1)
+                    need_new_key=true
+                    ;;
+                2)
+                    # Let user select from existing keys
+                    local key_count=$(echo "$gpg_keys" | wc -l)
+                    if [[ $key_count -gt 1 ]]; then
+                        echo ""
+                        echo -e "${BOLD}Select key to use:${NC}"
+                        local i=1
+                        while IFS= read -r key_id; do
+                            [[ -z "$key_id" ]] && continue
+                            local key_email=$(gpg --list-secret-keys --keyid-format=long "$key_id" 2>/dev/null | grep -oP '(?<=<)[^>]+(?=>)' | head -1)
+                            echo "  $i) $key_id ($key_email)"
+                            ((i++))
+                        done <<< "$gpg_keys"
+                        echo ""
+                        read -p "Select key [1]: " key_choice
+                        key_choice=${key_choice:-1}
+                        selected_key=$(echo "$gpg_keys" | sed -n "${key_choice}p")
+                    else
+                        selected_key=$(echo "$gpg_keys" | head -1)
+                    fi
+                    ;;
+                3)
+                    # Change Git email to match GPG
+                    local first_key=$(echo "$gpg_keys" | head -1)
+                    local gpg_email=$(gpg --list-secret-keys --keyid-format=long "$first_key" 2>/dev/null | grep -oP '(?<=<)[^>]+(?=>)' | head -1)
+                    local gpg_name=$(gpg --list-secret-keys --keyid-format=long "$first_key" 2>/dev/null | grep "^uid" | sed 's/uid.*\] //' | sed 's/ <.*//' | head -1)
+                    
+                    echo ""
+                    echo -e "This will change your Git identity to:"
+                    echo -e "  Name:  ${CYAN}$gpg_name${NC}"
+                    echo -e "  Email: ${CYAN}$gpg_email${NC}"
+                    echo ""
+                    read -p "Proceed? [Y/n]: " confirm_change
+                    confirm_change=${confirm_change:-Y}
+                    
+                    if [[ "$confirm_change" =~ ^[Yy] ]]; then
+                        git config --global user.name "$gpg_name"
+                        git config --global user.email "$gpg_email"
+                        git_name="$gpg_name"
+                        git_email="$gpg_email"
+                        selected_key="$first_key"
+                        print_success "Git identity updated to: $gpg_name <$gpg_email>"
+                    else
+                        print_warning "Cancelled. Skipping GPG configuration."
+                        return 0
+                    fi
+                    ;;
+                4)
+                    print_warning "Skipping GPG configuration"
+                    return 0
+                    ;;
+                *)
+                    need_new_key=true
+                    ;;
+            esac
+        fi
+    fi
+    
+    # Create new key if needed
+    if [[ "$need_new_key" == true ]]; then
+        echo ""
+        read -p "Create a new GPG key for $git_name <$git_email>? [Y/n]: " create_key
+        create_key=${create_key:-Y}
+        
+        if [[ "$create_key" =~ ^[Yy] ]]; then
+            print_step "Creating GPG key for: $git_name <$git_email>"
+            echo ""
+            echo -e "${CYAN}You will be prompted to set a passphrase for your GPG key.${NC}"
+            echo -e "${YELLOW}Remember this passphrase - you'll need it to sign commits.${NC}"
+            echo ""
+            
+            # Generate GPG key
+            gpg --batch --gen-key <<EOF
+Key-Type: eddsa
+Key-Curve: ed25519
+Key-Usage: sign
+Subkey-Type: ecdh
+Subkey-Curve: cv25519
+Subkey-Usage: encrypt
+Name-Real: $git_name
+Name-Email: $git_email
+Expire-Date: 0
+%commit
+EOF
+            
+            # Get the new key ID
+            selected_key=$(gpg --list-secret-keys --keyid-format=long "$git_email" 2>/dev/null | grep -E "^sec" | awk '{print $2}' | cut -d'/' -f2 | head -1)
+            
+            if [[ -n "$selected_key" ]]; then
+                print_success "GPG key created: $selected_key"
+            else
+                print_error "Failed to create GPG key"
+                return 1
+            fi
+        else
+            print_warning "Skipping GPG configuration"
+            return 0
+        fi
+    fi
+    
+    # Validate we have a key
+    if [[ -z "$selected_key" ]]; then
+        print_error "No GPG key selected"
+        return 1
+    fi
+    
+    echo ""
+    print_step "Configuring Git to use GPG key: $selected_key"
+    
+    # Configure Git for GPG signing
+    git config --global user.signingkey "$selected_key"
+    git config --global commit.gpgsign true
+    git config --global tag.gpgsign true
+    git config --global gpg.program gpg
+    
+    print_success "Git configured for GPG signing"
+    
+    # === GitHub Integration ===
+    if command -v gh &>/dev/null; then
+        echo ""
+        echo -e "${BOLD}GitHub Integration${NC}"
+        echo ""
+        
+        # Check if authenticated with gh
+        if ! gh auth status &>/dev/null; then
+            print_warning "GitHub CLI not authenticated"
+            read -p "Authenticate with GitHub now? [Y/n]: " auth_gh
+            auth_gh=${auth_gh:-Y}
+            
+            if [[ "$auth_gh" =~ ^[Yy] ]]; then
+                print_step "Starting GitHub authentication..."
+                gh auth login
+            else
+                print_warning "Skipping GitHub integration"
+                echo "  To add your GPG key later:"
+                echo "    gpg --armor --export $selected_key | gh gpg-key add -"
+                echo ""
+                print_success "GPG configuration complete!"
+                return 0
+            fi
+        fi
+        
+        # Check if key already exists on GitHub BEFORE asking
+        local existing_keys=""
+        if gh gpg-key list &>/dev/null 2>&1; then
+            existing_keys=$(gh gpg-key list 2>/dev/null | grep -i "$selected_key" || true)
+        fi
+        
+        if [[ -n "$existing_keys" ]]; then
+            print_success "GPG key already exists on GitHub!"
+        else
+            read -p "Add GPG public key to GitHub? [Y/n]: " add_to_gh
+            add_to_gh=${add_to_gh:-Y}
+            
+            if [[ "$add_to_gh" =~ ^[Yy] ]]; then
+                # Check if we have required scopes
+                if ! gh gpg-key list &>/dev/null 2>&1; then
+                    print_step "Requesting GitHub GPG permissions..."
+                    echo -e "${YELLOW}This will open your browser to authorize GPG key access.${NC}"
+                    echo ""
+                    gh auth refresh -s admin:gpg_key
+                    
+                    if [[ $? -ne 0 ]]; then
+                        print_warning "Could not get GPG permissions. You can add the key manually:"
+                        echo "  gpg --armor --export $selected_key | gh gpg-key add -"
+                        return 0
+                    fi
+                fi
+                
+                print_step "Adding GPG key to GitHub..."
+                
+                if gpg --armor --export "$selected_key" | gh gpg-key add - 2>/dev/null; then
+                    print_success "GPG key added to GitHub!"
+                    echo ""
+                    echo -e "${GREEN}Your commits will now show as 'Verified' on GitHub!${NC}"
+                else
+                    print_warning "Could not add key to GitHub automatically."
+                    echo ""
+                    echo "  Manual steps:"
+                    echo "    1. Run: gpg --armor --export $selected_key"
+                    echo "    2. Copy the output (including BEGIN/END lines)"
+                    echo "    3. Go to: https://github.com/settings/gpg/new"
+                    echo "    4. Paste and save"
+                fi
+            fi
+        fi
+    else
+        echo ""
+        print_warning "GitHub CLI (gh) not installed."
+        echo "  To add your GPG key to GitHub manually:"
+        echo "    1. Run: gpg --armor --export $selected_key"
+        echo "    2. Copy the output"
+        echo "    3. Go to: https://github.com/settings/gpg/new"
+    fi
+    
+    echo ""
+    print_success "GPG configuration complete!"
+    echo ""
+    echo -e "${CYAN}Test signing with:${NC} echo 'test' | gpg --clearsign"
+    echo -e "${CYAN}Test commit with:${NC} git commit --allow-empty -m 'test: gpg signing'"
+}
+
+configure_ssh() {
+    print_header "🔑 SSH Key Configuration"
+    
+    # Check if SSH key already exists
+    if ls ~/.ssh/*.pub &>/dev/null; then
+        echo -e "${GREEN}Found existing SSH keys:${NC}"
+        for key in ~/.ssh/*.pub; do
+            echo "  • $(basename $key)"
+        done
+        echo ""
+        read -p "Configure SSH anyway? [y/N]: " setup_ssh
+        if [[ ! "$setup_ssh" =~ ^[Yy] ]]; then
+            print_step "Skipping SSH configuration"
+            return 0
+        fi
+    fi
+    
+    # Run the dedicated SSH setup script
+    if [[ -f "$DOTFILES_DIR/scripts/setup-ssh.sh" ]]; then
+        bash "$DOTFILES_DIR/scripts/setup-ssh.sh"
+    else
+        print_warning "SSH setup script not found"
+        echo ""
+        echo "To generate an SSH key manually:"
+        echo "  ssh-keygen -t ed25519 -C \"your_email@example.com\""
+        echo ""
+        echo "To add to GitHub:"
+        echo "  gh ssh-key add ~/.ssh/id_ed25519.pub"
+    fi
 }
 
 configure_p10k() {
@@ -615,6 +1034,8 @@ main() {
     
     # Post-installation configuration
     configure_git
+    configure_gpg
+    configure_ssh
     configure_p10k
     
     # Final message

@@ -244,3 +244,67 @@ alias dotfiles='cd ~/dotfiles'
 # SYSTEM UPDATE (Complete)
 # ==============================================================================
 alias update_system='update_all_systems'
+
+# ==============================================================================
+# MODERN CLI REPLACEMENTS
+# ==============================================================================
+# Use modern rust-based tools if installed
+command -v dust &>/dev/null && alias du='dust'
+command -v procs &>/dev/null && alias ps='procs'
+command -v duf &>/dev/null && alias df='duf'
+
+# ==============================================================================
+# DOCKER COMPOSE V2
+# ==============================================================================
+alias dcup='docker compose up -d'
+alias dcdown='docker compose down'
+alias dcrestart='docker compose restart'
+alias dcbuild='docker compose build'
+alias dclogs='docker compose logs -f'
+alias dcps='docker compose ps'
+alias dcexec='docker compose exec'
+
+# ==============================================================================
+# KUBERNETES SHORTCUTS
+# ==============================================================================
+alias kctx='kubectl config use-context'
+alias kns='kubectl config set-context --current --namespace'
+alias kgall='kubectl get all'
+alias kdesc='kubectl describe'
+alias klog='kubectl logs -f'
+alias kpf='kubectl port-forward'
+
+# ==============================================================================
+# QUICK SERVERS
+# ==============================================================================
+alias http='python3 -m http.server'
+alias https='python3 -m http.server --bind 0.0.0.0'
+alias phpserve='php -S localhost:8000'
+
+# ==============================================================================
+# CLIPBOARD (Wayland + X11 Support)
+# ==============================================================================
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+    alias pbcopy='wl-copy'
+    alias pbpaste='wl-paste'
+fi
+
+# ==============================================================================
+# TMUX
+# ==============================================================================
+alias ta='tmux attach -t'
+alias tls='tmux list-sessions'
+alias tn='tmux new-session -s'
+alias tk='tmux kill-session -t'
+
+# ==============================================================================
+# MISC UTILITIES
+# ==============================================================================
+alias busy='cat /dev/urandom | hexdump -C | grep "ca fe"'
+alias fontlist='fc-list : family | sort | uniq'
+alias publicip='curl -s ifconfig.me'
+alias localips='ip -br addr'
+alias listening='ss -tlnp'
+alias largest='du -h --max-depth=1 | sort -hr | head -10'
+alias cleanup='sudo dnf autoremove -y && sudo dnf clean all && flatpak uninstall --unused -y'
+
