@@ -26,10 +26,10 @@ extract() {
             *.rpm)       rpm2cpio "$1" | cpio -idmv ;;
             *.xz)        unxz "$1"        ;;
             *.lzma)      unlzma "$1"      ;;
-            *)           echo "❌ '$1': formato no soportado" ;;
+            *)           echo "❌ '$1': unsupported format" ;;
         esac
     else
-        echo "❌ '$1' no es un archivo válido"
+        echo "❌ '$1' is not a valid file"
     fi
 }
 
@@ -63,7 +63,7 @@ cdi() {
 cdgr() {
     local root
     root=$(git rev-parse --show-toplevel 2>/dev/null)
-    [[ -n "$root" ]] && cd "$root" || echo "❌ No estás en un repo git"
+    [[ -n "$root" ]] && cd "$root" || echo "❌ You are not in a git repo"
 }
 
 # ==============================================================================
@@ -122,13 +122,13 @@ gdi() {
 # Commit with conventional format
 gcommit() {
     local types="feat\nfix\ndocs\nstyle\nrefactor\nperf\ntest\nchore\nbuild\nci"
-    local type=$(echo -e "$types" | fzf --prompt="Tipo: " --height=15)
+    local type=$(echo -e "$types" | fzf --prompt="Type: " --height=15)
     [[ -z "$type" ]] && return 1
     
-    echo -n "Scope (opcional, Enter para omitir): "
+    echo -n "Scope (optional, Enter to skip): "
     read scope
     
-    echo -n "Mensaje: "
+    echo -n "Message: "
     read msg
     [[ -z "$msg" ]] && return 1
     
@@ -187,13 +187,13 @@ drm-i() {
 
 # Full Docker cleanup
 dclean() {
-    echo "🐳 Limpiando Docker..."
+    echo "🐳 Cleaning Docker..."
     docker container prune -f
     docker image prune -af
     docker volume prune -f
     docker network prune -f
     docker builder prune -af
-    echo "✅ Docker limpio"
+    echo "✅ Docker cleaned"
 }
 
 # ==============================================================================
@@ -215,7 +215,7 @@ ports() {
 # Find process by port
 port-process() {
     local port="${1:-}"
-    [[ -z "$port" ]] && { echo "Uso: port-process <puerto>"; return 1; }
+    [[ -z "$port" ]] && { echo "Usage: port-process <port>"; return 1; }
     sudo lsof -i :$port
 }
 
@@ -226,7 +226,7 @@ port-process() {
 # System info summary
 sysinfo() {
     echo "╭───────────────────────────────────────╮"
-    echo "│  🖥️  Sistema                           │"
+    echo "│  🖥️  System                            │"
     echo "╰───────────────────────────────────────╯"
     echo " Hostname: $(hostname)"
     echo " OS:       $(cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '"')"
@@ -234,29 +234,29 @@ sysinfo() {
     echo " Uptime:   $(uptime -p | sed 's/up //')"
     echo ""
     echo "╭───────────────────────────────────────╮"
-    echo "│  💾 Recursos                          │"
+    echo "│  💾 Resources                         │"
     echo "╰───────────────────────────────────────╯"
     echo " CPU:      $(nproc) cores"
     echo " RAM:      $(free -h | awk '/^Mem:/ {print $3 " / " $2}')"
     echo " Swap:     $(free -h | awk '/^Swap:/ {print $3 " / " $2}')"
-    echo " Disco /:  $(df -h / | awk 'NR==2 {print $3 " / " $2 " (" $5 ")"}')"
+    echo " Disk /:   $(df -h / | awk 'NR==2 {print $3 " / " $2 " (" $5 ")"}')"
 }
 
 # Disk space by directory
 diskspace() {
-    echo "📊 Uso de disco en $(pwd):"
+    echo "📊 Disk usage in $(pwd):"
     du -h --max-depth=1 2>/dev/null | sort -hr | head -20
 }
 
 # Top memory processes
 topmem() {
-    echo "🧠 Top ${1:-10} procesos por memoria:"
+    echo "🧠 Top ${1:-10} processes by memory:"
     ps aux --sort=-%mem | head -n $((${1:-10} + 1))
 }
 
 # Top CPU processes
 topcpu() {
-    echo "⚡ Top ${1:-10} procesos por CPU:"
+    echo "⚡ Top ${1:-10} processes by CPU:"
     ps aux --sort=-%cpu | head -n $((${1:-10} + 1))
 }
 
@@ -267,7 +267,7 @@ topcpu() {
 # Quick HTTP server
 serve() {
     local port="${1:-8000}"
-    echo "🌐 Servidor en http://localhost:$port"
+    echo "🌐 Server at http://localhost:$port"
     python3 -m http.server "$port"
 }
 
@@ -308,7 +308,7 @@ hosts() { sudo ${EDITOR:-cursor} /etc/hosts; }
 # ==============================================================================
 
 update_all_systems() {
-    echo "🔄 Actualizando sistema..."
+    echo "🔄 Updating system..."
     
     echo "\n📦 DNF packages..."
     sudo dnf upgrade -y
@@ -332,7 +332,7 @@ update_all_systems() {
         (cd "$dir" && git pull --quiet 2>/dev/null) || true
     done
     
-    echo "\n✅ Sistema actualizado!"
+    echo "\n✅ System updated!"
 }
 
 # ==============================================================================
@@ -358,11 +358,11 @@ qr() {
 countdown() {
     local secs="${1:-60}"
     while [[ $secs -gt 0 ]]; do
-        echo -ne "\r⏰ $secs segundos restantes...  "
+        echo -ne "\r⏰ $secs seconds remaining...  "
         sleep 1
         ((secs--))
     done
-    echo -e "\r🔔 ¡Tiempo!                    "
+    echo -e "\r🔔 Time's up!                    "
     # Play sound if available
     paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || true
 }
@@ -370,7 +370,7 @@ countdown() {
 # Stopwatch
 stopwatch() {
     local start=$(date +%s)
-    echo "⏱️  Cronómetro iniciado. Ctrl+C para detener."
+    echo "⏱️  Stopwatch started. Ctrl+C to stop."
     while true; do
         local now=$(date +%s)
         local elapsed=$((now - start))
@@ -389,7 +389,7 @@ note() {
         ${EDITOR:-cursor} "$note_file"
     else
         echo "- $(date +%H:%M) $*" >> "$note_file"
-        echo "📝 Nota guardada"
+        echo "📝 Note saved"
     fi
 }
 
@@ -401,22 +401,22 @@ todo() {
         add)
             shift
             echo "[ ] $*" >> "$todo_file"
-            echo "✅ Tarea añadida"
+            echo "✅ Task added"
             ;;
         done)
             if [[ -f "$todo_file" ]]; then
                 cat -n "$todo_file"
-                echo -n "Número de tarea completada: "
+                echo -n "Completed task number: "
                 read num
                 sed -i "${num}s/\[ \]/[x]/" "$todo_file"
             fi
             ;;
         clear)
             > "$todo_file"
-            echo "🗑️  Lista limpia"
+            echo "🗑️  List cleared"
             ;;
         *)
-            [[ -f "$todo_file" ]] && cat "$todo_file" || echo "Lista vacía"
+            [[ -f "$todo_file" ]] && cat "$todo_file" || echo "List empty"
             ;;
     esac
 }

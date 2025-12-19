@@ -1,34 +1,38 @@
-# 🚀 Dotfiles - Configuración Optimizada para Fedora
+# 🚀 Dotfiles - Optimized Configuration for Fedora
 
 [![Fedora](https://img.shields.io/badge/Fedora-294172?style=for-the-badge&logo=fedora&logoColor=white)](https://getfedora.org/)
 [![Zsh](https://img.shields.io/badge/Zsh-F15A24?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.zsh.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
-Configuración de terminal optimizada para máximo rendimiento y productividad.
+Terminal configuration optimized for maximum performance and productivity.
 
-## ⚡ Características
+## ⚡ Features
 
-- **Tiempo de carga <100ms** - Lazy loading y caché optimizado
-- **Powerlevel10k** - Prompt hermoso e informativo
-- **40+ aliases** - Comandos frecuentes simplificados
-- **20+ funciones** - Utilidades para desarrollo
-- **Instalación automática** - Un comando para configurar todo
+- **Load time <100ms** - Lazy loading and optimized cache
+- **Interactive installer** - Sudo upfront, backup options, install/reinstall modes
+- **Powerlevel10k** - Beautiful and informative prompt
+- **50+ aliases** - Simplified frequent commands
+- **25+ functions** - Development utilities
+- **NVIDIA GPU support** - Automatic detection and driver installation
+- **VPN ready** - OpenVPN and WireGuard support
 
-## 📦 Incluye
+## 📦 Includes
 
-| Categoría | Herramientas |
-|-----------|-------------|
+| Category | Tools |
+|----------|-------|
 | 🐚 Shell | Zsh, Oh-My-Zsh, Powerlevel10k |
 | 📝 Editor | VSCode, Cursor |
-| 🔍 Búsqueda | FZF, Ripgrep, fd-find |
-| 📁 Archivos | lsd, bat, eza, colorls |
+| 🔍 Search | FZF, Ripgrep, fd-find |
+| 📁 Files | lsd, eza, bat, colorls |
 | 🐳 Containers | Docker, Docker Compose |
 | 🌐 Browser | Brave |
 | 📦 Node | NVM, Node LTS, PNPM |
 | 🐍 Python | Miniconda |
-| 🔧 Utils | lazygit, btop, zoxide, tldr |
+| 🔧 Utils | lazygit, btop, zoxide, tldr, duf, procs, dust |
+| 🔐 VPN | OpenVPN, WireGuard |
+| 🎮 GPU | NVIDIA drivers (auto-detect) |
 
-## 🚀 Instalación Rápida
+## 🚀 Quick Installation
 
 ```bash
 git clone https://github.com/nahuelrosas/dotfiles.git ~/dotfiles
@@ -36,81 +40,112 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-O con Make:
+The installer will:
+1. Request sudo access upfront
+2. Ask about backup preferences
+3. Let you choose fresh install or reinstall mode
+4. Offer optional components (NVIDIA drivers, VPN tools)
+
+## 📋 Requirements
+
+- **OS:** Fedora 38+ (tested on Fedora 43)
+- **RAM:** 4GB minimum
+- **Internet:** Required for installation
+
+## 🔧 Make Commands
+
 ```bash
-make install
+# Installation
+make install          # Interactive installation
+make reinstall        # Force reinstall all packages
+
+# Backup Management
+make backup           # Create a new backup
+make clean-backups    # Remove old backups (keep latest)
+make delete-all-backups # Delete ALL backups
+
+# Updates
+make update           # Update all tools and plugins
+
+# Individual Components
+make nvidia           # Install NVIDIA drivers
+make vpn              # Install VPN tools
+make docker           # Setup Docker
+make fonts            # Install Nerd Fonts
+make flatpak          # Install Flatpak apps
+
+# Utilities
+make test             # Test shell startup time
+make compile          # Compile zsh files
+make clean            # Remove compiled files
+make status           # Show current status
+make lint             # Check scripts for errors
+make help             # Show all commands
 ```
 
-## 📋 Requisitos
-
-- **SO:** Fedora 38+ (probado en Fedora 41)
-- **RAM:** 4GB mínimo
-- **Internet:** Requerido para instalación
-
-## 🔧 Comandos Make
-
-```bash
-make install    # Instalación completa
-make backup     # Backup de configs actuales
-make update     # Actualizar herramientas
-make uninstall  # Revertir cambios
-make help       # Ver todos los comandos
-```
-
-## 📁 Estructura
+## 📁 Structure
 
 ```
 dotfiles/
-├── zsh/              # Configuración Zsh modular
-│   ├── .zshrc        # Config principal
-│   ├── .zshenv       # Variables de entorno
-│   ├── aliases.zsh   # Aliases
-│   └── functions.zsh # Funciones útiles
-├── kitty/            # Configuración terminal Kitty
-├── git/              # Configuración Git
-├── scripts/          # Scripts de instalación
-└── config/           # Otras configuraciones
+├── zsh/                  # Modular Zsh configuration
+│   ├── .zshrc            # Main config
+│   ├── .zshenv           # Environment variables
+│   ├── aliases.zsh       # Aliases
+│   ├── functions.zsh     # Useful functions
+│   └── lazy-loaders.zsh  # Lazy loading for performance
+├── kitty/                # Kitty terminal configuration
+├── git/                  # Git configuration
+├── scripts/              # Installation scripts
+│   ├── setup-fedora.sh   # Base packages
+│   ├── setup-tools.sh    # Dev tools
+│   ├── setup-docker.sh   # Docker
+│   ├── setup-nvm.sh      # Node.js
+│   ├── setup-fonts.sh    # Nerd Fonts
+│   ├── setup-flatpak.sh  # Flatpak apps
+│   ├── setup-nvidia.sh   # NVIDIA drivers
+│   └── setup-vpn.sh      # VPN tools
+└── config/               # Other configurations
 ```
 
-## ⌨️ Aliases Principales
+## ⌨️ Main Aliases
 
-| Alias | Comando | Descripción |
+| Alias | Command | Description |
 |-------|---------|-------------|
-| `ll` | `lsd -lh` | Lista detallada |
-| `cat` | `bat` | Cat con syntax highlighting |
+| `ll` | `lsd -lh` | Detailed listing |
+| `cat` | `bat` | Cat with syntax highlighting |
 | `lg` | `lazygit` | Git TUI |
-| `top` | `btop` | Monitor de sistema |
-| `..` | `cd ..` | Subir directorio |
-| `gs` | `git status` | Estado de git |
+| `top` | `btop` | System monitor |
+| `..` | `cd ..` | Go up directory |
+| `gs` | `git status` | Git status |
 
-## 🛠️ Funciones Útiles
+## 🛠️ Useful Functions
 
-| Función | Descripción |
-|---------|-------------|
-| `extract <file>` | Extrae cualquier archivo comprimido |
-| `mkcd <dir>` | Crea directorio y entra |
-| `ff` | Búsqueda interactiva de archivos |
-| `fgrep <term>` | Búsqueda en contenido de archivos |
-| `gcob` | Checkout interactivo de branches |
-| `dshell` | Shell en contenedor Docker |
-| `fkill` | Matar proceso interactivamente |
-| `sysinfo` | Información del sistema |
+| Function | Description |
+|----------|-------------|
+| `extract <file>` | Extract any compressed file |
+| `mkcd <dir>` | Create directory and enter it |
+| `ff` | Interactive file search |
+| `fgr <term>` | Search in file contents |
+| `gcob` | Interactive branch checkout |
+| `dshell` | Shell into Docker container |
+| `fkill` | Kill process interactively |
+| `sysinfo` | System information |
 
-## 🎨 Personalización
+## 🎨 Customization
 
-### Cambiar tema de Kitty
-Edita `kitty/kitty.conf` y cambia la línea:
+### Change Kitty theme
+Edit `kitty/kitty.conf` and change the line:
 ```conf
 include dracula.conf
-# Por ejemplo: include tokyo-night.conf
+# For example: include tokyo-night.conf
 ```
 
-### Configurar Powerlevel10k
+### Configure Powerlevel10k
 ```bash
 p10k configure
 ```
 
-## 🔄 Actualización
+## 🔄 Update
 
 ```bash
 cd ~/dotfiles
@@ -118,42 +153,51 @@ git pull
 make update
 ```
 
-## 📝 Post-Instalación
+## 📝 Post-Installation
 
-1. **Reinicia la terminal** o ejecuta `exec zsh`
-2. **Configura p10k** con `p10k configure`
-3. **Añade claves SSH** a `~/.ssh/`
-4. **Configura Git:**
+1. **Restart the terminal** or run `exec zsh`
+2. **Configure p10k** with `p10k configure`
+3. **Add SSH keys** to `~/.ssh/`
+4. **Configure Git:**
    ```bash
-   git config --global user.name "Tu Nombre"
-   git config --global user.email "tu@email.com"
+   git config --global user.name "Your Name"
+   git config --global user.email "your@email.com"
    ```
 
-## 🐛 Solución de Problemas
+## 🐛 Troubleshooting
 
-### Icons no se muestran
-Asegúrate de usar una Nerd Font en tu terminal:
+### Icons not showing
+Make sure you're using a Nerd Font in your terminal:
 ```bash
 fc-list | grep -i "fira.*nerd"
 ```
 
-### Tiempo de carga lento
-Verifica con:
+### Slow load time
+Check with:
 ```bash
-time zsh -i -c exit
+make test
 ```
 
-### Errores de permisos Docker
+### Docker permission errors
 ```bash
 sudo usermod -aG docker $USER
-# Reinicia sesión
+# Restart session
 ```
 
-## 📄 Licencia
+### NVIDIA driver issues
+```bash
+# Check if GPU is detected
+lspci | grep -i nvidia
 
-MIT License - Usa y modifica libremente.
+# Reinstall drivers
+make nvidia
+```
+
+## 📄 License
+
+MIT License - Use and modify freely.
 
 ---
 
-**Autor:** nahuelrosas  
-**Última actualización:** Diciembre 2024
+**Author:** nahuelrosas  
+**Last updated:** December 2025

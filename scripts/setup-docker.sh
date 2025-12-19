@@ -6,16 +6,23 @@ set -e
 
 echo "🐳 Setting up Docker..."
 
-# Install dnf-plugins-core if needed
-if ! rpm -q dnf-plugins-core &>/dev/null; then
-    echo "  Installing dnf-plugins-core..."
-    sudo dnf install -y dnf-plugins-core
-fi
+# Detect Fedora version for dnf5 compatibility
+FEDORA_VERSION=$(rpm -E %fedora)
 
 # Add Docker repository
 if [ ! -f /etc/yum.repos.d/docker-ce.repo ]; then
     echo "  Adding Docker repository..."
-    sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    
+    # Fedora 41+ uses dnf5 with different syntax
+    if [[ "$FEDORA_VERSION" -ge 41 ]]; then
+        # Use dnf5 config-manager addrepo syntax
+        sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo 2>/dev/null || \
+        # Fallback: download repo file directly
+        sudo curl -fsSL https://download.docker.com/linux/fedora/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
+    else
+        # Legacy dnf4 syntax
+        sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    fi
 fi
 
 # Docker packages
@@ -31,7 +38,7 @@ DOCKER_PACKAGES=(
 echo "  Installing Docker packages..."
 for pkg in "${DOCKER_PACKAGES[@]}"; do
     if ! rpm -q "$pkg" &>/dev/null; then
-        sudo dnf install -y "$pkg"
+        sudo dnf install -y "$pkg" 2>/dev/null || echo "    ⚠️ Failed to install $pkg"
     else
         echo "    $pkg already installed"
     fi

@@ -17,9 +17,13 @@ PACKAGES=(
     "unzip"
     "util-linux-user"
     
+    # Terminal emulator
+    "kitty"
+    
     # Modern CLI tools
     "bat"           # Better cat
     "lsd"           # Better ls
+    "eza"           # Modern ls (alternative)
     "fd-find"       # Better find
     "ripgrep"       # Better grep
     "zoxide"        # Smart cd
@@ -27,6 +31,14 @@ PACKAGES=(
     "tealdeer"      # Fast tldr
     "btop"          # Better top
     "direnv"        # Per-directory env
+    "duf"           # Disk usage viewer
+    "procs"         # Modern ps
+    "dust"          # Disk usage analyzer
+    "tokei"         # Code statistics
+    "hyperfine"     # Benchmarking tool
+    
+    # System info (fastfetch replaces deprecated neofetch)
+    "fastfetch"
     
     # Development tools
     "make"
@@ -47,17 +59,18 @@ PACKAGES=(
     # System tools
     "testdisk"
     "htop"
-    "neofetch"
     "tree"
     "xclip"
+    "tmux"
+    "screen"
 )
 
-# Install packages
+# Install packages with --skip-unavailable flag
 echo "Installing ${#PACKAGES[@]} packages..."
-sudo dnf install -y "${PACKAGES[@]}" || {
+sudo dnf install -y --skip-unavailable "${PACKAGES[@]}" 2>/dev/null || {
     echo "⚠️ Some packages failed to install. Trying individually..."
     for pkg in "${PACKAGES[@]}"; do
-        sudo dnf install -y "$pkg" 2>/dev/null || echo "  Skipped: $pkg"
+        sudo dnf install -y --skip-unavailable "$pkg" 2>/dev/null || echo "  Skipped: $pkg"
     done
 }
 

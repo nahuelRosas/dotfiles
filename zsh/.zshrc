@@ -104,20 +104,12 @@ bindkey '^[[1;5C' forward-word
 bindkey '^[[1;5D' backward-word
 
 # ==============================================================================
-# SOURCE MODULAR CONFIGS
+# TOOL INTEGRATIONS (Fast)
 # ==============================================================================
 _source_if_exists() {
     [[ -f "$1" ]] && source "$1"
 }
 
-_source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/aliases.zsh"
-_source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/functions.zsh"
-_source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/lazy-loaders.zsh"
-_source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/completions.zsh"
-
-# ==============================================================================
-# TOOL INTEGRATIONS (Fast)
-# ==============================================================================
 # FZF
 _source_if_exists ~/.fzf.zsh
 
@@ -133,13 +125,24 @@ if command -v colorls &>/dev/null; then
 fi
 
 # ==============================================================================
-# POWERLEVEL10K CONFIG
+# POWERLEVEL10K CONFIG (must be before aliases to restore 'aliases' option)
 # ==============================================================================
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
 
+# CRITICAL: Re-enable aliases after p10k (p10k disables them with 'setopt no_aliases')
+setopt aliases
+
 # Finalize instant prompt
 command -v p10k-instant-prompt-finalize &>/dev/null && p10k-instant-prompt-finalize
+
+# ==============================================================================
+# SOURCE MODULAR CONFIGS (after p10k to ensure aliases option is enabled)
+# ==============================================================================
+_source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/aliases.zsh"
+_source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/functions.zsh"
+_source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/lazy-loaders.zsh"
+_source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/completions.zsh"
 
 # ==============================================================================
 # PERFORMANCE: Compile zshrc in background
