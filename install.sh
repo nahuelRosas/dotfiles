@@ -27,6 +27,7 @@ FORCE_REINSTALL=false
 INSTALL_NVIDIA=false
 INSTALL_VPN=false
 INSTALL_CLOUD=false
+INSTALL_FLUTTER=false
 
 # ==============================================================================
 # Helper Functions
@@ -244,6 +245,11 @@ show_extras_menu() {
     read -p "Install Cloud CLIs (AWS, GCloud, Firebase, Terraform, kubectl)? [Y/n]: " cloud_choice
     cloud_choice=${cloud_choice:-Y}
     [[ "$cloud_choice" =~ ^[Yy] ]] && INSTALL_CLOUD=true
+    
+    # Flutter option (default: Yes)
+    read -p "Install Flutter SDK (Android + Web development)? [Y/n]: " flutter_choice
+    flutter_choice=${flutter_choice:-Y}
+    [[ "$flutter_choice" =~ ^[Yy] ]] && INSTALL_FLUTTER=true
 }
 
 # ==============================================================================
@@ -404,6 +410,7 @@ run_setup_scripts() {
     [[ "$INSTALL_NVIDIA" == true ]] && scripts+=("setup-nvidia.sh")
     [[ "$INSTALL_VPN" == true ]] && scripts+=("setup-vpn.sh")
     [[ "$INSTALL_CLOUD" == true ]] && scripts+=("setup-cloud.sh")
+    [[ "$INSTALL_FLUTTER" == true ]] && scripts+=("setup-flutter.sh")
     
     for script in "${scripts[@]}"; do
         if [[ -f "$DOTFILES_DIR/scripts/$script" ]]; then

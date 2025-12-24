@@ -34,6 +34,7 @@ Terminal configuration optimized for maximum performance and productivity.
 | 🌐 Browser | Brave |
 | 📦 Node | NVM, Node LTS, PNPM, Bun |
 | 🐍 Python | Miniconda, pyenv |
+| 🎯 Flutter | Flutter SDK, Dart, Android SDK, Web |
 | 🔧 Utils | lazygit, btop, zoxide, tldr, duf, procs, dust |
 | 🔐 VPN | OpenVPN, WireGuard |
 | 🎮 GPU | NVIDIA drivers (auto-detect) |
@@ -81,6 +82,7 @@ make vpn              # Install VPN tools
 make docker           # Setup Docker
 make fonts            # Install Nerd Fonts
 make flatpak          # Install Flatpak apps
+make flutter          # Install Flutter SDK (Android + Web)
 
 # Utilities
 make test             # Test shell startup time
@@ -130,6 +132,10 @@ dotfiles/
 | `top` | `btop` | System monitor |
 | `..` | `cd ..` | Go up directory |
 | `gs` | `git status` | Git status |
+| `fl` | `flutter` | Flutter command |
+| `flr` | `flutter run` | Run Flutter app |
+| `flb` | `flutter build` | Build Flutter app |
+| `flpg` | `flutter pub get` | Get packages |
 
 ## 🛠️ Useful Functions
 

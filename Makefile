@@ -1,4 +1,4 @@
-.PHONY: install backup update uninstall help test reinstall clean-backups nvidia vpn
+.PHONY: install backup update uninstall help test reinstall clean-backups nvidia vpn flutter
 
 # Colors
 CYAN := \033[0;36m
@@ -122,6 +122,11 @@ flatpak: ## Install Flatpak applications
 	@echo "$(CYAN)Installing Flatpak apps...$(NC)"
 	@chmod +x scripts/setup-flatpak.sh
 	@./scripts/setup-flatpak.sh
+
+flutter: ## Install Flutter SDK with Android and Web support
+	@echo "$(CYAN)Installing Flutter SDK...$(NC)"
+	@chmod +x scripts/setup-flutter.sh
+	@./scripts/setup-flutter.sh
 
 ssh: ## Configure SSH keys for GitHub
 	@echo "$(CYAN)Configuring SSH keys...$(NC)"

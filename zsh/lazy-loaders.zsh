@@ -207,3 +207,25 @@ if command -v kubectl &>/dev/null; then
     # Only load completion when actually completing kubectl commands
     zstyle ':completion:*:*:kubectl:*' script =(kubectl completion zsh)
 fi
+
+# ==============================================================================
+# FLUTTER
+# ==============================================================================
+_flutter_loaded=0
+
+_load_flutter() {
+    if [[ $_flutter_loaded -eq 0 ]] && [[ -d "$HOME/.flutter" ]]; then
+        _flutter_loaded=1
+        unset -f flutter dart
+        
+        export FLUTTER_HOME="$HOME/.flutter"
+        export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
+        export PATH="$FLUTTER_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+        
+        # Disable analytics
+        export FLUTTER_DISABLE_ANALYTICS=true
+    fi
+}
+
+flutter() { _load_flutter; flutter "$@"; }
+dart() { _load_flutter; dart "$@"; }

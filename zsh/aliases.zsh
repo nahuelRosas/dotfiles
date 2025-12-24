@@ -232,6 +232,26 @@ alias venv='python3 -m venv'
 alias activate='source venv/bin/activate'
 
 # ==============================================================================
+# FLUTTER
+# ==============================================================================
+alias fl='flutter'
+alias flr='flutter run'
+alias flrr='flutter run --release'
+alias flb='flutter build'
+alias flc='flutter clean'
+alias flpg='flutter pub get'
+alias flpa='flutter pub add'
+alias flpu='flutter pub upgrade'
+alias fldr='flutter doctor'
+alias flan='flutter analyze'
+alias flt='flutter test'
+alias flba='flutter build apk'
+alias flbar='flutter build apk --release'
+alias flbw='flutter build web'
+alias flcr='flutter create'
+alias fldev='flutter devices'
+
+# ==============================================================================
 # QUICK DIRECTORIES
 # ==============================================================================
 alias dl='cd ~/Downloads'
