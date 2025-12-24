@@ -28,6 +28,7 @@ INSTALL_NVIDIA=false
 INSTALL_VPN=false
 INSTALL_CLOUD=false
 INSTALL_FLUTTER=false
+INSTALL_FIREBASE=false
 
 # ==============================================================================
 # Helper Functions
@@ -250,6 +251,11 @@ show_extras_menu() {
     read -p "Install Flutter SDK (Android + Web development)? [Y/n]: " flutter_choice
     flutter_choice=${flutter_choice:-Y}
     [[ "$flutter_choice" =~ ^[Yy] ]] && INSTALL_FLUTTER=true
+    
+    # Firebase CLI option (default: Yes)
+    read -p "Install Firebase CLI? [Y/n]: " firebase_choice
+    firebase_choice=${firebase_choice:-Y}
+    [[ "$firebase_choice" =~ ^[Yy] ]] && INSTALL_FIREBASE=true
 }
 
 # ==============================================================================
@@ -411,6 +417,7 @@ run_setup_scripts() {
     [[ "$INSTALL_VPN" == true ]] && scripts+=("setup-vpn.sh")
     [[ "$INSTALL_CLOUD" == true ]] && scripts+=("setup-cloud.sh")
     [[ "$INSTALL_FLUTTER" == true ]] && scripts+=("setup-flutter.sh")
+    [[ "$INSTALL_FIREBASE" == true ]] && scripts+=("setup-firebase.sh")
     
     for script in "${scripts[@]}"; do
         if [[ -f "$DOTFILES_DIR/scripts/$script" ]]; then

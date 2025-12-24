@@ -1,4 +1,4 @@
-.PHONY: install backup update uninstall help test reinstall clean-backups nvidia vpn flutter
+.PHONY: install backup update uninstall help test reinstall clean-backups nvidia vpn flutter firebase
 
 # Colors
 CYAN := \033[0;36m
@@ -127,6 +127,11 @@ flutter: ## Install Flutter SDK with Android and Web support
 	@echo "$(CYAN)Installing Flutter SDK...$(NC)"
 	@chmod +x scripts/setup-flutter.sh
 	@./scripts/setup-flutter.sh
+
+firebase: ## Install Firebase CLI
+	@echo "$(CYAN)Installing Firebase CLI...$(NC)"
+	@chmod +x scripts/setup-firebase.sh
+	@./scripts/setup-firebase.sh
 
 ssh: ## Configure SSH keys for GitHub
 	@echo "$(CYAN)Configuring SSH keys...$(NC)"
