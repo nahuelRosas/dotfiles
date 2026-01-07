@@ -66,14 +66,40 @@ detect_distro() {
 check_network() {
     print_step "Checking network connectivity..."
     
-    if ! ping -c 1 -W 3 github.com &>/dev/null && ! curl -s --max-time 5 https://github.com &>/dev/null; then
-        print_error "No internet connection to GitHub detected."
-        print_warning "Flutter installation requires internet access."
-        print_warning "Please check your network connection and try again."
-        exit 1
-    fi
+    local max_retries=3
+    local retry_delay=2
+    local endpoints=("https://github.com" "https://storage.googleapis.com" "https://dl.google.com")
     
-    print_success "Network connectivity OK"
+    for ((attempt=1; attempt<=max_retries; attempt++)); do
+        # Try curl first (more reliable than ping, ICMP is often blocked)
+        for endpoint in "${endpoints[@]}"; do
+            if curl -sf --connect-timeout 5 --max-time 10 -o /dev/null "$endpoint" 2>/dev/null; then
+                print_success "Network connectivity OK (via $endpoint)"
+                return 0
+            fi
+        done
+        
+        # Fallback to ping (some networks block HTTPS but allow ICMP)
+        if ping -c 1 -W 3 github.com &>/dev/null; then
+            print_success "Network connectivity OK (via ping)"
+            return 0
+        fi
+        
+        if [[ $attempt -lt $max_retries ]]; then
+            print_warning "Network check failed (attempt $attempt/$max_retries). Retrying in ${retry_delay}s..."
+            sleep $retry_delay
+        fi
+    done
+    
+    print_error "No internet connection detected after $max_retries attempts."
+    print_warning "Flutter installation requires internet access."
+    print_warning "Please check your network connection and try again."
+    print_warning ""
+    print_warning "Troubleshooting tips:"
+    print_warning "  - Check if you're behind a proxy (set HTTP_PROXY/HTTPS_PROXY)"
+    print_warning "  - Check if firewall is blocking connections"
+    print_warning "  - Try: curl -v https://github.com"
+    exit 1
 }
 
 # ==============================================================================

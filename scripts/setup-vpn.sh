@@ -1,68 +1,77 @@
 #!/bin/bash
 # ==============================================================================
-# VPN Tools Setup for Fedora
+# VPN Tools Setup (Multi-distro: Fedora, Ubuntu/Debian)
 # ==============================================================================
 set -e
 
-check_internet() {
-    # Method 1: HTTP check (works through proxies and when ICMP is blocked)
-    if curl -fsSL --connect-timeout 5 --max-time 10 https://www.google.com -o /dev/null 2>/dev/null; then
-        return 0
-    fi
-    
-    # Method 2: DNS resolution check
-    if host google.com &>/dev/null 2>&1 || nslookup google.com &>/dev/null 2>&1; then
-        # DNS works, try a different HTTP endpoint
-        if curl -fsSL --connect-timeout 5 --max-time 10 https://cloudflare.com -o /dev/null 2>/dev/null; then
-            return 0
-        fi
-    fi
-    
-    # Method 3: ICMP ping (fallback)
-    if ping -c 1 -W 3 8.8.8.8 &>/dev/null || ping -c 1 -W 3 1.1.1.1 &>/dev/null; then
-        return 0
-    fi
-    
-    echo "  ⚠️  No internet connection detected."
-    echo "  ⚠️  This script requires internet to download VPN tools."
-    return 1
-}
+# Source common library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
 
 if ! check_internet; then
     echo "✅ VPN tools setup skipped (no internet)"
     exit 0
 fi
 
+# Skip on WSL (VPN is typically handled by Windows)
+if is_wsl; then
+    print_warning "VPN tools skipped on WSL (use Windows VPN instead)"
+    exit 0
+fi
+
 echo "🔐 Setting up VPN tools..."
+print_success "Detected: $DISTRO"
 
-# Packages to install
-VPN_PACKAGES=(
-    # OpenVPN
-    "openvpn"
-    "NetworkManager-openvpn"
-    "NetworkManager-openvpn-gnome"
-    
-    # WireGuard
-    "wireguard-tools"
-    
-    # NetworkManager integration
-    "NetworkManager-tui"
-)
+# ==============================================================================
+# Install VPN packages by distro
+# ==============================================================================
+case "$DISTRO" in
+    fedora)
+        VPN_PACKAGES=(
+            "openvpn"
+            "NetworkManager-openvpn"
+            "NetworkManager-openvpn-gnome"
+            "wireguard-tools"
+            "NetworkManager-tui"
+        )
+        sudo dnf install -y --skip-unavailable "${VPN_PACKAGES[@]}" 2>/dev/null || {
+            print_warning "Some packages failed. Installing individually..."
+            for pkg in "${VPN_PACKAGES[@]}"; do
+                sudo dnf install -y "$pkg" 2>/dev/null || echo "  Skipped: $pkg"
+            done
+        }
+        ;;
+    ubuntu|debian)
+        VPN_PACKAGES=(
+            "openvpn"
+            "network-manager-openvpn"
+            "network-manager-openvpn-gnome"
+            "wireguard-tools"
+            "network-manager"
+        )
+        sudo apt update
+        sudo apt install -y "${VPN_PACKAGES[@]}" 2>/dev/null || {
+            print_warning "Some packages failed. Installing individually..."
+            for pkg in "${VPN_PACKAGES[@]}"; do
+                sudo apt install -y "$pkg" 2>/dev/null || echo "  Skipped: $pkg"
+            done
+        }
+        ;;
+    arch)
+        sudo pacman -S --noconfirm openvpn networkmanager-openvpn wireguard-tools 2>/dev/null || true
+        ;;
+    macos)
+        brew install openvpn wireguard-tools 2>/dev/null || true
+        ;;
+esac
 
-# Install packages
-echo "  Installing VPN packages..."
-sudo dnf install -y --skip-unavailable "${VPN_PACKAGES[@]}" 2>/dev/null || {
-    echo "  ⚠️ Some packages failed. Installing individually..."
-    for pkg in "${VPN_PACKAGES[@]}"; do
-        sudo dnf install -y "$pkg" 2>/dev/null || echo "  Skipped: $pkg"
-    done
-}
+# Restart NetworkManager to pick up new plugins
+if command -v systemctl &>/dev/null; then
+    echo "  Restarting NetworkManager..."
+    sudo systemctl restart NetworkManager 2>/dev/null || true
+fi
 
-# Enable and restart NetworkManager to pick up new plugins
-echo "  Restarting NetworkManager..."
-sudo systemctl restart NetworkManager 2>/dev/null || true
-
-# Create WireGuard config directory if it doesn't exist
+# Create WireGuard config directory
 if [[ ! -d /etc/wireguard ]]; then
     sudo mkdir -p /etc/wireguard
     sudo chmod 700 /etc/wireguard
@@ -83,5 +92,5 @@ fi
 echo ""
 echo "📋 Usage:"
 echo "  • OpenVPN: Import .ovpn file via Settings → Network → VPN"
-echo "  • WireGuard: Import config via 'nmcli connection import type wireguard file /path/to/config.conf'"
+echo "  • WireGuard: nmcli connection import type wireguard file /path/to/config.conf"
 echo "  • Or use: 'nmtui' for a text-based interface"

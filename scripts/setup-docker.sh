@@ -1,32 +1,12 @@
 #!/bin/bash
 # ==============================================================================
-# Docker Setup for Fedora
+# Docker Setup (Multi-distro: Fedora, Ubuntu/Debian)
 # ==============================================================================
 set -e
 
-check_internet() {
-    # Method 1: HTTP check (works through proxies and when ICMP is blocked)
-    if curl -fsSL --connect-timeout 5 --max-time 10 https://www.google.com -o /dev/null 2>/dev/null; then
-        return 0
-    fi
-    
-    # Method 2: DNS resolution check
-    if host google.com &>/dev/null 2>&1 || nslookup google.com &>/dev/null 2>&1; then
-        # DNS works, try a different HTTP endpoint
-        if curl -fsSL --connect-timeout 5 --max-time 10 https://cloudflare.com -o /dev/null 2>/dev/null; then
-            return 0
-        fi
-    fi
-    
-    # Method 3: ICMP ping (fallback)
-    if ping -c 1 -W 3 8.8.8.8 &>/dev/null || ping -c 1 -W 3 1.1.1.1 &>/dev/null; then
-        return 0
-    fi
-    
-    echo "  ⚠️  No internet connection detected."
-    echo "  ⚠️  This script requires internet to download Docker."
-    return 1
-}
+# Source common library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
 
 if ! check_internet; then
     echo "✅ Docker setup skipped (no internet)"
@@ -34,27 +14,9 @@ if ! check_internet; then
 fi
 
 echo "🐳 Setting up Docker..."
+print_success "Detected: $DISTRO $(is_wsl && echo '(WSL)')"
 
-# Detect Fedora version for dnf5 compatibility
-FEDORA_VERSION=$(rpm -E %fedora)
-
-# Add Docker repository
-if [ ! -f /etc/yum.repos.d/docker-ce.repo ]; then
-    echo "  Adding Docker repository..."
-    
-    # Fedora 41+ uses dnf5 with different syntax
-    if [[ "$FEDORA_VERSION" -ge 41 ]]; then
-        # Use dnf5 config-manager addrepo syntax
-        sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo 2>/dev/null || \
-        # Fallback: download repo file directly
-        sudo curl -fsSL https://download.docker.com/linux/fedora/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
-    else
-        # Legacy dnf4 syntax
-        sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-    fi
-fi
-
-# Docker packages
+# Docker packages (same names on both Fedora and Ubuntu)
 DOCKER_PACKAGES=(
     "docker-ce"
     "docker-ce-cli"
@@ -63,38 +25,110 @@ DOCKER_PACKAGES=(
     "docker-compose-plugin"
 )
 
-# Install packages
-echo "  Installing Docker packages..."
-for pkg in "${DOCKER_PACKAGES[@]}"; do
-    if ! rpm -q "$pkg" &>/dev/null; then
-        sudo dnf install -y "$pkg" 2>/dev/null || echo "    ⚠️ Failed to install $pkg"
-    else
-        echo "    $pkg already installed"
+# ==============================================================================
+# Add Docker Repository
+# ==============================================================================
+setup_docker_repo_fedora() {
+    if [ ! -f /etc/yum.repos.d/docker-ce.repo ]; then
+        echo "  Adding Docker repository..."
+        local FEDORA_VERSION=$(rpm -E %fedora)
+        
+        if [[ "$FEDORA_VERSION" -ge 41 ]]; then
+            sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo 2>/dev/null || \
+            sudo curl -fsSL https://download.docker.com/linux/fedora/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
+        else
+            sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo 2>/dev/null || true
+        fi
     fi
-done
+}
 
-# Start and enable Docker service
-echo "  Configuring Docker service..."
-if ! systemctl is-active --quiet docker; then
-    sudo systemctl start docker
-fi
+setup_docker_repo_ubuntu() {
+    if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+        echo "  Adding Docker repository..."
+        
+        # Install prerequisites
+        sudo apt update
+        sudo apt install -y ca-certificates curl gnupg lsb-release
+        
+        # Add Docker's official GPG key
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
+        
+        # Add repository
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        
+        sudo apt update
+    fi
+}
 
-if ! systemctl is-enabled --quiet docker; then
-    sudo systemctl enable docker
-fi
+# ==============================================================================
+# Install Docker
+# ==============================================================================
+install_docker_fedora() {
+    setup_docker_repo_fedora
+    
+    echo "  Installing Docker packages..."
+    for pkg in "${DOCKER_PACKAGES[@]}"; do
+        if ! rpm -q "$pkg" &>/dev/null; then
+            sudo dnf install -y "$pkg" 2>/dev/null || print_warning "Failed to install $pkg"
+        else
+            echo "    $pkg already installed"
+        fi
+    done
+}
 
-# Add user to docker group
-if ! groups "$USER" | grep -q docker; then
-    echo "  Adding $USER to docker group..."
-    sudo usermod -aG docker "$USER"
-    echo "  ⚠️ You need to log out and back in for docker group to take effect"
-fi
+install_docker_ubuntu() {
+    setup_docker_repo_ubuntu
+    
+    echo "  Installing Docker packages..."
+    sudo apt install -y "${DOCKER_PACKAGES[@]}" 2>/dev/null || {
+        for pkg in "${DOCKER_PACKAGES[@]}"; do
+            sudo apt install -y "$pkg" 2>/dev/null || print_warning "Failed to install $pkg"
+        done
+    }
+}
 
-# Configure Docker daemon (optional optimizations)
-DOCKER_DAEMON_CONFIG="/etc/docker/daemon.json"
-if [ ! -f "$DOCKER_DAEMON_CONFIG" ]; then
-    echo "  Configuring Docker daemon..."
-    sudo tee "$DOCKER_DAEMON_CONFIG" > /dev/null <<EOF
+# ==============================================================================
+# Configure Docker Service
+# ==============================================================================
+configure_docker_service() {
+    # WSL note: Docker Desktop for Windows is typically used instead
+    if is_wsl; then
+        print_warning "On WSL, consider using Docker Desktop for Windows instead"
+        print_warning "If using native Docker in WSL2, ensure systemd is enabled"
+    fi
+    
+    # Start and enable Docker service (if systemd is available)
+    if command -v systemctl &>/dev/null; then
+        echo "  Configuring Docker service..."
+        if ! systemctl is-active --quiet docker 2>/dev/null; then
+            sudo systemctl start docker 2>/dev/null || true
+        fi
+        if ! systemctl is-enabled --quiet docker 2>/dev/null; then
+            sudo systemctl enable docker 2>/dev/null || true
+        fi
+    fi
+    
+    # Add user to docker group
+    if ! groups "$USER" | grep -q docker; then
+        echo "  Adding $USER to docker group..."
+        sudo usermod -aG docker "$USER"
+        print_warning "You need to log out and back in for docker group to take effect"
+    fi
+}
+
+# ==============================================================================
+# Configure Docker Daemon
+# ==============================================================================
+configure_docker_daemon() {
+    local DOCKER_DAEMON_CONFIG="/etc/docker/daemon.json"
+    
+    if [ ! -f "$DOCKER_DAEMON_CONFIG" ]; then
+        echo "  Configuring Docker daemon..."
+        sudo mkdir -p /etc/docker
+        sudo tee "$DOCKER_DAEMON_CONFIG" > /dev/null <<EOF
 {
   "log-driver": "json-file",
   "log-opts": {
@@ -107,16 +141,45 @@ if [ ! -f "$DOCKER_DAEMON_CONFIG" ]; then
   }
 }
 EOF
-    sudo systemctl restart docker
-fi
+        if command -v systemctl &>/dev/null; then
+            sudo systemctl restart docker 2>/dev/null || true
+        fi
+    fi
+}
+
+# ==============================================================================
+# Main
+# ==============================================================================
+case "$DISTRO" in
+    fedora)
+        install_docker_fedora
+        ;;
+    ubuntu|debian)
+        install_docker_ubuntu
+        ;;
+    arch)
+        sudo pacman -S --noconfirm docker docker-compose 2>/dev/null || true
+        ;;
+    macos)
+        print_warning "On macOS, install Docker Desktop from https://www.docker.com/products/docker-desktop"
+        exit 0
+        ;;
+    *)
+        print_error "Unsupported distro: $DISTRO"
+        exit 1
+        ;;
+esac
+
+configure_docker_service
+configure_docker_daemon
 
 # Verify installation
 if docker --version &>/dev/null; then
     echo "✅ Docker installed: $(docker --version)"
 else
-    echo "⚠️ Docker installation may have issues"
+    print_warning "Docker installation may have issues"
 fi
 
-if docker compose version &>/dev/null; then
-    echo "✅ Docker Compose installed: $(docker compose version --short)"
+if docker compose version &>/dev/null 2>&1; then
+    echo "✅ Docker Compose installed: $(docker compose version --short 2>/dev/null)"
 fi

@@ -62,9 +62,15 @@ update: ## Update all tools and plugins
 	@echo "$(CYAN)Updating FZF...$(NC)"
 	@cd ~/.fzf && git pull --quiet && ./install --all --no-bash --no-fish --no-update-rc
 	@echo "$(CYAN)Updating system packages...$(NC)"
-	@sudo dnf upgrade -y --quiet
+	@if command -v dnf >/dev/null 2>&1; then \
+		sudo dnf upgrade -y --quiet; \
+	elif command -v apt >/dev/null 2>&1; then \
+		sudo apt update && sudo apt upgrade -y; \
+	elif command -v pacman >/dev/null 2>&1; then \
+		sudo pacman -Syu --noconfirm; \
+	fi
 	@echo "$(CYAN)Updating Flatpak...$(NC)"
-	@flatpak update -y
+	@flatpak update -y 2>/dev/null || true
 	@echo "$(GREEN)Update complete!$(NC)"
 
 uninstall: ## Remove symlinks and restore backups

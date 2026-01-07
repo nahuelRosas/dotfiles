@@ -435,7 +435,7 @@ run_setup_scripts() {
     fi
     
     local scripts=(
-        "setup-fedora.sh"
+        "setup-base.sh"
         "setup-tools.sh"
         "setup-fonts.sh"
         "setup-docker.sh"

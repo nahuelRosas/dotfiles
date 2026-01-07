@@ -1,53 +1,62 @@
 #!/bin/bash
 # ==============================================================================
-# Flatpak Apps Setup
+# Flatpak Apps Setup (Multi-distro: Fedora, Ubuntu/Debian)
 # ==============================================================================
 set -e
 
-check_internet() {
-    # Method 1: HTTP check (works through proxies and when ICMP is blocked)
-    if curl -fsSL --connect-timeout 5 --max-time 10 https://www.google.com -o /dev/null 2>/dev/null; then
-        return 0
-    fi
-    
-    # Method 2: DNS resolution check
-    if host google.com &>/dev/null 2>&1 || nslookup google.com &>/dev/null 2>&1; then
-        # DNS works, try a different HTTP endpoint
-        if curl -fsSL --connect-timeout 5 --max-time 10 https://cloudflare.com -o /dev/null 2>/dev/null; then
-            return 0
-        fi
-    fi
-    
-    # Method 3: ICMP ping (fallback)
-    if ping -c 1 -W 3 8.8.8.8 &>/dev/null || ping -c 1 -W 3 1.1.1.1 &>/dev/null; then
-        return 0
-    fi
-    
-    echo "  ⚠️  No internet connection detected."
-    echo "  ⚠️  This script requires internet to download Flatpak applications."
-    return 1
-}
+# Source common library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
 
 if ! check_internet; then
     echo "✅ Flatpak setup skipped (no internet)"
     exit 0
 fi
 
-echo "📱 Setting up Flatpak..."
-
-# Install Flatpak if not present
-if ! command -v flatpak &>/dev/null; then
-    echo "  Installing Flatpak..."
-    sudo dnf install -y flatpak
+# Skip on WSL (no GUI apps)
+if is_wsl; then
+    print_warning "Flatpak skipped on WSL (no GUI support)"
+    exit 0
 fi
 
+echo "📱 Setting up Flatpak..."
+print_success "Detected: $DISTRO"
+
+# ==============================================================================
+# Install Flatpak
+# ==============================================================================
+install_flatpak() {
+    if command -v flatpak &>/dev/null; then
+        print_success "Flatpak already installed"
+        return 0
+    fi
+    
+    echo "  Installing Flatpak..."
+    case "$DISTRO" in
+        fedora)
+            sudo dnf install -y flatpak
+            ;;
+        ubuntu|debian)
+            sudo apt update
+            sudo apt install -y flatpak gnome-software-plugin-flatpak
+            ;;
+        arch)
+            sudo pacman -S --noconfirm flatpak
+            ;;
+    esac
+}
+
+install_flatpak
+
 # Add Flathub repository
-if ! flatpak remote-list | grep -q flathub; then
+if ! flatpak remote-list 2>/dev/null | grep -q flathub; then
     echo "  Adding Flathub repository..."
     flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 fi
 
+# ==============================================================================
 # Applications to install
+# ==============================================================================
 APPS=(
     # Development
     "com.google.AndroidStudio"
@@ -60,7 +69,6 @@ APPS=(
     # Productivity
     "com.wps.Office"
     "md.obsidian.Obsidian"
-    # "org.keepassxc.KeePassXC"  # Install via DNF instead: sudo dnf install keepassxc
     
     # Media
     "com.mastermindzh.tidal-hifi"
@@ -73,18 +81,17 @@ APPS=(
     
     # Utilities
     "org.gnome.Calculator"
-    "org.gnome.Evince"  # PDF viewer
+    "org.gnome.Evince"
     "org.gimp.GIMP"
-    "com.github.tchx84.Flatseal"  # Flatpak permissions manager
+    "com.github.tchx84.Flatseal"
 )
 
 echo "  Installing applications..."
 for app in "${APPS[@]}"; do
-    # Check if installed
-    if ! flatpak list --user | grep -q "$app" && ! flatpak list | grep -q "$app"; then
+    if ! flatpak list --user 2>/dev/null | grep -q "$app" && ! flatpak list 2>/dev/null | grep -q "$app"; then
         echo "    Installing $app..."
         flatpak install --user -y flathub "$app" 2>/dev/null || {
-            echo "    ⚠️ Failed to install $app"
+            print_warning "Failed to install $app"
         }
     else
         echo "    $app already installed"
@@ -104,4 +111,4 @@ echo "✅ Flatpak setup complete"
 # List installed apps
 echo ""
 echo "📋 Installed Flatpak applications:"
-flatpak list --app --columns=application | head -20
+flatpak list --app --columns=application 2>/dev/null | head -20

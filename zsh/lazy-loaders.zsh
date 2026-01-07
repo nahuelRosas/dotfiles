@@ -28,6 +28,13 @@ nvm() { _load_nvm; nvm "$@"; }
 pnpm() { _load_nvm; pnpm "$@"; }
 yarn() { _load_nvm; yarn "$@"; }
 
+# Global npm packages (installed via npm install -g)
+firebase() { _load_nvm; firebase "$@"; }
+vercel() { _load_nvm; vercel "$@"; }
+netlify() { _load_nvm; netlify "$@"; }
+tsc() { _load_nvm; tsc "$@"; }
+ts-node() { _load_nvm; ts-node "$@"; }
+
 # ==============================================================================
 # CONDA (Anaconda/Miniconda)
 # Conda initialization adds ~200ms. Defer until used.
