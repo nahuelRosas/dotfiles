@@ -153,4 +153,9 @@ _source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/completions.zsh"
         zcompile "$zshrc"
     fi
 } &!
-export PATH="$PATH:${XDG_CONFIG_HOME:-$HOME/.config}/.flutter/bin"
+
+# ==============================================================================
+# FLUTTER SDK (if installed)
+# ==============================================================================
+# Load Flutter environment if the env file exists
+_source_if_exists "$HOME/.flutter_env"
