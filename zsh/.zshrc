@@ -153,3 +153,4 @@ _source_if_exists "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/completions.zsh"
         zcompile "$zshrc"
     fi
 } &!
+export PATH="$PATH:${XDG_CONFIG_HOME:-$HOME/.config}/.flutter/bin"

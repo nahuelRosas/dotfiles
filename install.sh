@@ -70,6 +70,30 @@ EOF
     echo -e "${NC}"
 }
 
+check_internet() {
+    # Method 1: HTTP check (works through proxies and when ICMP is blocked)
+    if curl -fsSL --connect-timeout 5 --max-time 10 https://www.google.com -o /dev/null 2>/dev/null; then
+        return 0
+    fi
+    
+    # Method 2: DNS resolution check
+    if host google.com &>/dev/null 2>&1 || nslookup google.com &>/dev/null 2>&1; then
+        # DNS works, try a different HTTP endpoint
+        if curl -fsSL --connect-timeout 5 --max-time 10 https://cloudflare.com -o /dev/null 2>/dev/null; then
+            return 0
+        fi
+    fi
+    
+    # Method 3: ICMP ping (fallback)
+    if ping -c 1 -W 3 8.8.8.8 &>/dev/null || ping -c 1 -W 3 1.1.1.1 &>/dev/null; then
+        return 0
+    fi
+    
+    print_error "No internet connection detected"
+    print_warning "This script requires internet to download components"
+    return 1
+}
+
 # ==============================================================================
 # Pre-flight Checks
 # ==============================================================================
@@ -404,6 +428,12 @@ install_base_packages() {
 run_setup_scripts() {
     print_header "⚙️ Running Setup Scripts"
     
+    # Check internet connectivity
+    if ! check_internet; then
+        print_error "Cannot run setup scripts without internet connection"
+        return 1
+    fi
+    
     local scripts=(
         "setup-fedora.sh"
         "setup-tools.sh"
@@ -443,6 +473,10 @@ setup_oh_my_zsh() {
     fi
     
     if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+        if ! check_internet; then
+            print_error "Cannot install Oh-My-Zsh without internet connection"
+            return 1
+        fi
         print_step "Installing Oh-My-Zsh..."
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     else
@@ -460,6 +494,10 @@ setup_powerlevel10k() {
     fi
     
     if [[ ! -d "$p10k_dir" ]]; then
+        if ! check_internet; then
+            print_error "Cannot clone Powerlevel10k without internet connection"
+            return 1
+        fi
         print_step "Cloning Powerlevel10k..."
         git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$p10k_dir"
     else
@@ -472,6 +510,11 @@ setup_powerlevel10k() {
 
 setup_zsh_plugins() {
     print_header "🔌 Configuring Zsh Plugins"
+    
+    if ! check_internet; then
+        print_error "Cannot install Zsh plugins without internet connection"
+        return 1
+    fi
     
     local ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
     
@@ -508,6 +551,10 @@ setup_fzf() {
     fi
     
     if [[ ! -d "$HOME/.fzf" ]]; then
+        if ! check_internet; then
+            print_error "Cannot install FZF without internet connection"
+            return 1
+        fi
         print_step "Installing FZF..."
         git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
         "$HOME/.fzf/install" --all --no-bash --no-fish
