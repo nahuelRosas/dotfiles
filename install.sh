@@ -370,6 +370,12 @@ setup_symlinks() {
     create_symlink "$DOTFILES_DIR/zsh/.zprofile" "$HOME/.zprofile"
     create_symlink "$DOTFILES_DIR/zsh/.zlogout" "$HOME/.zlogout"
     
+    # Bash/sh files (auto-launch zsh)
+    create_symlink "$DOTFILES_DIR/zsh/.bashrc" "$HOME/.bashrc"
+    create_symlink "$DOTFILES_DIR/zsh/.bash_profile" "$HOME/.bash_profile"
+    create_symlink "$DOTFILES_DIR/zsh/.profile" "$HOME/.profile"
+    create_symlink "$DOTFILES_DIR/zsh/.shrc" "$HOME/.shrc"
+    
     # Zsh config directory
     mkdir -p "$ZSH_CONFIG_DIR"
     create_symlink "$DOTFILES_DIR/zsh/aliases.zsh" "$ZSH_CONFIG_DIR/aliases.zsh"

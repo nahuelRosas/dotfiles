@@ -80,3 +80,6 @@ export BAT_THEME="Dracula"
 
 # Ripgrep config
 export RIPGREP_CONFIG_PATH="$XDG_CONFIG_HOME/ripgrep/config"
+
+# Sh interactive shell configuration (ENV is loaded by sh in interactive mode)
+export ENV="$HOME/.shrc"
