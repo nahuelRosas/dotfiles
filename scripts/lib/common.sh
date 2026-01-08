@@ -87,6 +87,108 @@ is_arch() { detect_distro && [[ "$DISTRO" == "arch" ]]; }
 is_macos() { detect_distro && [[ "$DISTRO" == "macos" ]]; }
 
 # ==============================================================================
+# NVM/Node.js Loading (for scripts that need npm)
+# ==============================================================================
+_NVM_LOADED=false
+
+load_nvm() {
+    [[ "$_NVM_LOADED" == true ]] && return 0
+    
+    export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+    if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+        source "$NVM_DIR/nvm.sh"
+        _NVM_LOADED=true
+        return 0
+    fi
+    return 1
+}
+
+# Ensure npm is available (loads NVM if needed)
+ensure_npm() {
+    load_nvm
+    command -v npm &>/dev/null
+}
+
+# Run npm command with NVM loaded
+run_npm() {
+    ensure_npm || { print_warning "npm not available"; return 1; }
+    npm "$@"
+}
+
+# ==============================================================================
+# Interactive Prompts
+# ==============================================================================
+
+# Simple yes/no prompt (default: no)
+ask_yes_no() {
+    local prompt="$1"
+    local default="${2:-n}"
+    
+    local hint
+    if [[ "$default" == "y" ]]; then
+        hint="[Y/n]"
+    else
+        hint="[y/N]"
+    fi
+    
+    read -p "$prompt $hint: " response
+    response=${response:-$default}
+    
+    [[ "$response" =~ ^[Yy] ]]
+}
+
+# Check if tool is installed and ask what to do
+# Returns: 0 = install, 1 = skip, 2 = uninstall requested
+# Usage: check_and_ask "Tool Name" "command_name" "uninstall_command (optional)"
+check_and_ask() {
+    local name="$1"
+    local cmd="$2"
+    local uninstall_cmd="${3:-}"
+    
+    if command -v "$cmd" &>/dev/null; then
+        # Already installed
+        if [[ "${FORCE_REINSTALL:-false}" == "true" ]]; then
+            return 0  # Reinstall
+        fi
+        
+        echo "  ✅ $name already installed"
+        
+        if [[ -n "$uninstall_cmd" ]]; then
+            if ask_yes_no "     Remove $name?" "n"; then
+                echo "  🗑️  Removing $name..."
+                eval "$uninstall_cmd" 2>/dev/null && print_success "$name removed" || print_warning "Failed to remove $name"
+            fi
+        fi
+        
+        return 1  # Skip installation
+    fi
+    
+    # Not installed - ask if user wants to install
+    if ask_yes_no "Install $name?" "n"; then
+        return 0  # Install
+    fi
+    
+    return 1  # Skip
+}
+
+# Uninstall a system package
+pkg_uninstall() {
+    local pkg="$1"
+    
+    case "$PKG_MANAGER" in
+        dnf) sudo dnf remove -y "$pkg" 2>/dev/null ;;
+        apt) sudo apt remove -y "$pkg" 2>/dev/null ;;
+        pacman) sudo pacman -R --noconfirm "$pkg" 2>/dev/null ;;
+        brew) brew uninstall "$pkg" 2>/dev/null ;;
+    esac
+}
+
+# Uninstall npm global package
+npm_uninstall() {
+    ensure_npm && run_npm uninstall -g "$1" 2>/dev/null
+}
+
+# ==============================================================================
 # Package Installation
 # ==============================================================================
 pkg_install() {

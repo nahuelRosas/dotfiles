@@ -1,12 +1,16 @@
 #!/bin/bash
 # ==============================================================================
 # Flatpak Apps Setup (Multi-distro: Fedora, Ubuntu/Debian)
+# Interactive version - asks before installing (default: no)
 # ==============================================================================
 set -e
 
 # Source common library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
+
+echo "📱 Flatpak Apps Setup"
+print_success "Detected: $DISTRO $(is_wsl && echo '(WSL)')"
 
 if ! check_internet; then
     echo "✅ Flatpak setup skipped (no internet)"
@@ -19,96 +23,106 @@ if is_wsl; then
     exit 0
 fi
 
-echo "📱 Setting up Flatpak..."
-print_success "Detected: $DISTRO"
-
 # ==============================================================================
-# Install Flatpak
+# Install Flatpak itself
 # ==============================================================================
-install_flatpak() {
-    if command -v flatpak &>/dev/null; then
-        print_success "Flatpak already installed"
-        return 0
+if ! command -v flatpak &>/dev/null; then
+    if ask_yes_no "Flatpak not installed. Install Flatpak?" "n"; then
+        echo "📦 Installing Flatpak..."
+        case "$DISTRO" in
+            fedora)
+                sudo dnf install -y flatpak && print_success "Flatpak installed"
+                ;;
+            ubuntu|debian)
+                sudo apt update
+                sudo apt install -y flatpak gnome-software-plugin-flatpak && print_success "Flatpak installed"
+                ;;
+            arch)
+                sudo pacman -S --noconfirm flatpak && print_success "Flatpak installed"
+                ;;
+        esac
+        
+        # Add Flathub
+        flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null
+    else
+        echo "✅ Skipping Flatpak setup"
+        exit 0
     fi
-    
-    echo "  Installing Flatpak..."
-    case "$DISTRO" in
-        fedora)
-            sudo dnf install -y flatpak
-            ;;
-        ubuntu|debian)
-            sudo apt update
-            sudo apt install -y flatpak gnome-software-plugin-flatpak
-            ;;
-        arch)
-            sudo pacman -S --noconfirm flatpak
-            ;;
-    esac
-}
-
-install_flatpak
-
-# Add Flathub repository
-if ! flatpak remote-list 2>/dev/null | grep -q flathub; then
-    echo "  Adding Flathub repository..."
-    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 fi
 
-# ==============================================================================
-# Applications to install
-# ==============================================================================
-APPS=(
-    # Development
-    "com.google.AndroidStudio"
-    "com.getpostman.Postman"
-    
-    # Communication
-    "com.slack.Slack"
-    "us.zoom.Zoom"
-    
-    # Productivity
-    "com.wps.Office"
-    "md.obsidian.Obsidian"
-    
-    # Media
-    "com.mastermindzh.tidal-hifi"
-    "com.spotify.Client"
-    "org.videolan.VLC"
-    
-    # GNOME Extensions
-    "org.gnome.Extensions"
-    "com.mattjakeman.ExtensionManager"
-    
-    # Utilities
-    "org.gnome.Calculator"
-    "org.gnome.Evince"
-    "org.gimp.GIMP"
-    "com.github.tchx84.Flatseal"
-)
-
-echo "  Installing applications..."
-for app in "${APPS[@]}"; do
-    if ! flatpak list --user 2>/dev/null | grep -q "$app" && ! flatpak list 2>/dev/null | grep -q "$app"; then
-        echo "    Installing $app..."
-        flatpak install --user -y flathub "$app" 2>/dev/null || {
-            print_warning "Failed to install $app"
-        }
-    else
-        echo "    $app already installed"
-    fi
-done
-
-# Update all Flatpak apps
-echo "  Updating Flatpak applications..."
-flatpak update -y 2>/dev/null || true
-
-# Update appstream data
-echo "  Updating appstream data..."
-flatpak update --appstream 2>/dev/null || true
-
-echo "✅ Flatpak setup complete"
-
-# List installed apps
 echo ""
-echo "📋 Installed Flatpak applications:"
-flatpak list --app --columns=application 2>/dev/null | head -20
+echo "Select which Flatpak apps to install:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# ==============================================================================
+# Applications - categorized
+# ==============================================================================
+
+# Helper to check and install flatpak app
+check_flatpak_app() {
+    local name="$1"
+    local app_id="$2"
+    
+    if flatpak list 2>/dev/null | grep -q "$app_id"; then
+        echo "  ✅ $name already installed"
+        if ask_yes_no "     Remove $name?" "n"; then
+            echo "  🗑️  Removing $name..."
+            flatpak uninstall -y "$app_id" 2>/dev/null && print_success "$name removed" || print_warning "Failed to remove $name"
+        fi
+        return 1
+    fi
+    
+    if ask_yes_no "Install $name?" "n"; then
+        return 0
+    fi
+    return 1
+}
+
+echo "── Development ──"
+check_flatpak_app "Android Studio" "com.google.AndroidStudio" && \
+    flatpak install --user -y flathub com.google.AndroidStudio 2>/dev/null
+
+check_flatpak_app "Postman" "com.getpostman.Postman" && \
+    flatpak install --user -y flathub com.getpostman.Postman 2>/dev/null
+
+echo ""
+echo "── Communication ──"
+check_flatpak_app "Slack" "com.slack.Slack" && \
+    flatpak install --user -y flathub com.slack.Slack 2>/dev/null
+
+check_flatpak_app "Zoom" "us.zoom.Zoom" && \
+    flatpak install --user -y flathub us.zoom.Zoom 2>/dev/null
+
+echo ""
+echo "── Productivity ──"
+check_flatpak_app "WPS Office" "com.wps.Office" && \
+    flatpak install --user -y flathub com.wps.Office 2>/dev/null
+
+check_flatpak_app "Obsidian" "md.obsidian.Obsidian" && \
+    flatpak install --user -y flathub md.obsidian.Obsidian 2>/dev/null
+
+echo ""
+echo "── Media ──"
+check_flatpak_app "Spotify" "com.spotify.Client" && \
+    flatpak install --user -y flathub com.spotify.Client 2>/dev/null
+
+check_flatpak_app "Tidal" "com.mastermindzh.tidal-hifi" && \
+    flatpak install --user -y flathub com.mastermindzh.tidal-hifi 2>/dev/null
+
+check_flatpak_app "VLC" "org.videolan.VLC" && \
+    flatpak install --user -y flathub org.videolan.VLC 2>/dev/null
+
+echo ""
+echo "── Utilities ──"
+check_flatpak_app "GNOME Extensions Manager" "com.mattjakeman.ExtensionManager" && \
+    flatpak install --user -y flathub com.mattjakeman.ExtensionManager 2>/dev/null
+
+check_flatpak_app "Flatseal (Permissions Manager)" "com.github.tchx84.Flatseal" && \
+    flatpak install --user -y flathub com.github.tchx84.Flatseal 2>/dev/null
+
+check_flatpak_app "GIMP" "org.gimp.GIMP" && \
+    flatpak install --user -y flathub org.gimp.GIMP 2>/dev/null
+
+echo ""
+echo "✅ Flatpak setup complete"

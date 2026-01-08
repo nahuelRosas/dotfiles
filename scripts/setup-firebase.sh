@@ -3,41 +3,12 @@
 # Firebase CLI Setup
 # ==============================================================================
 
-echo "🔥 Setting up Firebase CLI..."
+# Source common library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
 
-# Check internet connectivity
-check_internet() {
-    local max_retries=3
-    local retry_delay=2
-    
-    for ((attempt=1; attempt<=max_retries; attempt++)); do
-        # Method 1: HTTP check (works through proxies and when ICMP is blocked)
-        if curl -fsSL --connect-timeout 5 --max-time 10 https://www.google.com -o /dev/null 2>/dev/null; then
-            return 0
-        fi
-        
-        # Method 2: DNS resolution check
-        if host google.com &>/dev/null 2>&1 || nslookup google.com &>/dev/null 2>&1; then
-            # DNS works, try a different HTTP endpoint
-            if curl -fsSL --connect-timeout 5 --max-time 10 https://cloudflare.com -o /dev/null 2>/dev/null; then
-                return 0
-            fi
-        fi
-        
-        # Method 3: ICMP ping (fallback)
-        if ping -c 1 -W 3 8.8.8.8 &>/dev/null || ping -c 1 -W 3 1.1.1.1 &>/dev/null; then
-            return 0
-        fi
-        
-        if [[ $attempt -lt $max_retries ]]; then
-            sleep $retry_delay
-        fi
-    done
-    
-    echo "  ⚠️  No internet connection detected."
-    echo "  ⚠️  This script requires internet to download Firebase CLI."
-    return 1
-}
+echo "🔥 Setting up Firebase CLI..."
+print_success "Detected: $DISTRO $(is_wsl && echo '(WSL)')"
 
 if ! check_internet; then
     echo "✅ Firebase CLI setup skipped (no internet)"
@@ -53,10 +24,10 @@ setup_firebase() {
         return 0
     fi
     
-    # Firebase CLI is installed via npm
-    if command -v npm &>/dev/null; then
+    # Firebase CLI is installed via npm - use ensure_npm to load NVM if needed
+    if ensure_npm; then
         echo "  Installing firebase-tools via npm..."
-        npm install -g firebase-tools 2>/dev/null && \
+        run_npm install -g firebase-tools && \
             echo "  ✅ Firebase CLI installed: $(firebase --version 2>/dev/null)" || \
             echo "  ⚠️ Firebase CLI installation failed"
     else
