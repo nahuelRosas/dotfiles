@@ -12,8 +12,7 @@ _nvm_loaded=0
 _load_nvm() {
     if [[ $_nvm_loaded -eq 0 ]]; then
         _nvm_loaded=1
-        unset -f node npm npx nvm pnpm yarn
-        
+        unset -f node npm npx nvm pnpm yarn firebase vercel netlify tsc ts-node
         export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
         [[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
         [[ -s "$NVM_DIR/bash_completion" ]] && source "$NVM_DIR/bash_completion"
